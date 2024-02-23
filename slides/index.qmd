@@ -1,0 +1,583 @@
+---
+title: "Forecasting with Generalised Additive Models (GAMs) in R"
+subtitle: "Forecasting for Social Good<br><small>21 February 2024</small>"
+author: "Dr Nicola Rennie"
+format:
+  LUstyle-revealjs:
+    self-contained: true
+    auto-stretch: false
+    footer: "{{< fa envelope >}} [n.rennie@lancaster.ac.uk](mailto:n.rennie@lancaster.ac.uk) {{< fa globe >}} [nrennie.rbind.io](https://nrennie.rbind.io/) {{< fa brands linkedin >}} [nicola-rennie](https://www.linkedin.com/in/nicola-rennie/)"
+---
+
+# Welcome!
+
+## About me
+
+::: columns
+::: {.column .right}
+
+Lecturer in Health Data Science at [Lancaster Medical School](https://chicas.lancaster-university.uk/).
+
+<br>
+
+Academic background in statistics, with experience in data science consultancy.
+
+<br>
+
+Blog about R and data science at [nrennie.rbind.io/blog](https://nrennie.rbind.io/blog/).
+
+:::
+
+::: {.column}
+
+![](images/CHICASlogo.png){fig-align="center" fig-alt="CHICAS logo" width=70%}
+
+:::
+:::
+
+## What to expect during this workshop
+
+The workshop will run for *2 hours*.
+
+* Combines slides, live coding examples, and exercises for you to participate in.
+
+* Ask questions in the chat throughout!
+
+## What to expect during this workshop
+
+::: columns
+::: {.column}
+
+<br>
+
+I hope you end up with more questions than answers after this workshop!
+
+:::
+
+::: {.column .center-text}
+
+<br>
+
+![](images/questions.gif){fig-align="center" fig-alt="Stranger Things questions gif" width=80%}
+
+<small>Source: <a href="https://giphy.com/gifs/netflix-stranger-things-4-st4-cn7GcSZ1KWqO7CJw1B">giphy.com</a></small>
+
+:::
+:::
+
+## What you need for this workshop
+
+* You are comfortable with simple operations in R.
+
+* You know how to perform linear regression.
+
+## Workshop resources
+
+GitHub: [github.com/nrennie/f4sg-gams](https://github.com/nrennie/f4sg-gams)
+
+<br>
+
+Slides: [nrennie.github.io/f4sg-gams](https://nrennie.github.io/f4sg-gams)
+
+## Data
+
+We'll be modelling Covid-19 data during the workshop. The data is from the {COVID19} R package.
+
+* For Great Britain and France between January 2021 and January 2022.
+
+* For each day, data on cases, tests, vaccines, deaths, ...
+
+> Guidotti, E., Ardia, D., (2020), “COVID-19 Data Hub”, Journal of Open Source Software 5(51):2376, doi: [10.21105/joss.02376](10.21105/joss.02376).
+
+## Data
+
+How to download:
+
+```{r}
+#| eval: false
+#| echo: true
+covid <- readr::read_csv(
+  "https://raw.githubusercontent.com/nrennie/f4sg-gams/main/data/covid.csv"
+  )
+```
+
+<br>
+
+* See `data/` folder on GitHub for pre-processing.
+
+# What are generalised additive models? {background-color="#D9DBDB"}
+
+## Sometimes relationships are easy to spot...
+
+```{r}
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+library(ggplot2)
+set.seed(20240221)
+n <- 60
+ggplot(data.frame(x = rnorm(n)), aes(x = x, y = x + rnorm(n, 0, 0.4))) +
+  geom_point(size = 3) +
+  labs(y = "y") +
+  theme_bw(base_size = 20)
+ggplot(data.frame(x = rnorm(n)), aes(x = x, y = x^2 + rnorm(n, 0, 0.5))) +
+  geom_point(size = 3) +
+  labs(y = "y") +
+  theme_bw(base_size = 20)
+```
+
+## Sometimes relationships are easy to spot...
+
+```{r}
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+set.seed(20240221)
+n <- 20
+ggplot(
+  data.frame(x = 1:n),
+  aes(x = x)
+) +
+  geom_function(fun = function(x) sin(x) + 0.25*x) +
+  labs(y = "y") +
+  theme_bw(base_size = 20)
+n <- 350
+ggplot(
+  data.frame(x = 1:n, y = as.numeric(arima.sim(list(order = c(1, 0, 0), ar = 0.5), n = n))),
+  aes(x = x, y = y)
+) +
+  geom_line() +
+  labs(y = "y") +
+  theme_bw(base_size = 20)
+
+```
+
+## Other times not so much!
+
+```{r}
+#| label: read-data
+#| fig-align: center
+#| fig-height: 7
+#| message: false
+library(dplyr)
+covid <- readr::read_csv("../data/covid.csv")
+gbr_data <- covid |> 
+  filter(iso_alpha_3 == "GBR") 
+ggplot(gbr_data) +
+  geom_line(aes(date, confirmed)) +
+  labs(x = "", y = "Daily confirmed cases") +
+  theme_bw(base_size = 22)
+```
+
+## What are generalised additive models?
+
+Let's start with linear models...
+
+::: {.center-text}
+
+$\mathbb{E}(Y) = \alpha + x_1 + x_2 + ... + x_p$
+
+:::
+
+::: {.fragment}
+
+<br>
+
+Then generalised linear models...
+
+::: {.center-text}
+
+$g(\mathbb{E}(Y)) = \alpha + x_1 + x_2 + ... + x_p$
+
+:::
+
+:::
+
+## What are generalised additive models?
+
+Generalised additive models are essentially just a sum of smooth functions of the explanatory variables.
+
+::: {.center-text}
+
+$g(\mathbb{E}(Y)) = \alpha + s(x_1) + s(x_2) + ... + s(x_p)$
+
+:::
+
+::: {.fragment}
+
+```{r}
+#| eval: true
+#| echo: false
+#| layout-ncol: 3
+#| fig-height: 7
+set.seed(20240221)
+n <- 20
+ggplot(
+  data.frame(x = 1:n),
+  aes(x = x)
+) +
+  geom_function(fun = function(x) x + 0.5*x^2 - x^3) +
+  labs(y = "y", title = bquote(s(x[1]))) +
+  theme_bw(base_size = 20)
+ggplot(
+  data.frame(x = 1:n),
+  aes(x = x)
+) +
+  geom_function(fun = function(x) 3 + 0.1*x^3) +
+  labs(y = "y", title = bquote(s(x[2]))) +
+  theme_bw(base_size = 20)
+ggplot(
+  data.frame(x = 1:n),
+  aes(x = x)
+) +
+  geom_function(fun = function(x) x) +
+  labs(y = "y", title = bquote(s(x[3]))) +
+  theme_bw(base_size = 20)
+```
+
+:::
+
+## What are generalised additive models?
+
+![](images/gams-flex.png){fig-align="center" fig-alt="GAMs complexity diagram" width=100%}
+
+## Generalised additive models in R
+
+There are several packages for fittings GAMs in R. The two main packages are:
+
+* {gam}
+
+* {mgcv}
+
+We'll be using {mgcv}.
+
+> Hint: don't load both packages at the same time!
+
+## Live demo!
+
+<br><br>
+
+::: {.fragment}
+
+See `examples/example_01.R` for full code.
+
+:::
+
+## Exercise 1
+
+Open `exercises/exercise_01.R` for prompts.
+
+* Load the packages required for this workshop.
+
+* Load the data for the exercises. Subset it to look at France only.
+
+* Split the data into training and testing sets. 
+
+* Create a plot of confirmed cases over time.
+
+* Fit a linear model using the `gam()` function in {mgcv} with `confirmed` as the outcome, and `date_obs` as the explanatory variable.
+
+```{r}
+#| label: ex-1-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#b20e10",
+  color_text = "#b20e10",
+  color_running_text = "white",
+  color_running_background = "#b20e10",
+  color_finished_text = "#b20e10",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+. . . 
+
+See `exercise_solutions/exercise_solutions_01.R` for full solution.
+
+# Generalised additive models in R {background-color="#D9DBDB"}
+
+## Fitting smooth functions 
+
+We want to fit some sort of smooth function to each predictor. We can add together *basis* functions. 
+
+::: columns
+
+::: {.column}
+
+![](images/basis1.png){fig-align="center" fig-alt="Different basis functions" width=80%}
+
+:::
+
+::: {.column .fragment}
+
+![](images/basis2.png){fig-align="center" fig-alt="Different basis functions with fitted line" width=80%}
+
+:::
+
+
+:::
+
+## Fitting smooth functions 
+
+```{r}
+#| eval: false
+#| echo: true
+gam_0 <- gam(confirmed ~ date_obs, data = gbr_train)
+gam_1 <- gam(confirmed ~ s(date_obs), data = gbr_train)
+```
+
+<br>
+
+There are different smooth classes available: `s()`, `te()`, `ti()`, and `t2()`. Smooth classes are invoked directly by `s()` terms, or as building blocks for tensor product smoothing via `te()`, `ti()` or `t2()` terms. 
+
+<br>
+
+There are also different types of splines, specified by the `bs` argument. See `?smooth.terms` for details.
+
+## Multiple terms
+
+```{r}
+#| eval: false
+#| echo: true
+fit <- gam(y ~ s(x1) + s(x2) + x3, data = data)
+```
+
+* You can include multiple predictors in `gam()`.
+
+* You can use different types of smoothing for each one.
+
+* You can include non-smooth terms (esp. categorical) variables as well.
+
+## How smooth is smooth enough?
+
+![](images/smooth.png){fig-align="center" fig-alt="GAMs showing two levels of smoothing" width=80%}
+
+## Additional arguments
+
+* Level of smoothing can be controlled with `sp` in `gam()` or `s()`.
+
+* You can choose the dimension of the basis function using `k` in `s()`.
+
+> Hint: look at `?gam` and `?s` to see the wide range of arguments.
+
+## Live demo!
+
+<br><br>
+
+::: {.fragment}
+
+See `examples/example_02.R` for full code.
+
+:::
+
+## Exercise 2
+
+Open `exercises/exercise_02.R` for prompts.
+
+* Fit a GAM using `s()` and `gam()` to the confirmed cases in France.
+
+* Try adding different additional terms.
+
+* Try varying the smoothing parameter `sp` for each variable.
+
+* Plot the smooth functions for the predictors, and the outcome.
+
+```{r}
+#| label: ex-2-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#b20e10",
+  color_text = "#b20e10",
+  color_running_text = "white",
+  color_running_background = "#b20e10",
+  color_finished_text = "#b20e10",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+. . . 
+
+See `exercise_solutions/exercise_solutions_02.R` for full solution.
+
+
+# Predicting with GAMs {background-color="#D9DBDB"}
+
+## After you've fitted a GAM...
+
+::: {.incremental}
+
+* Is it a reasonable model?
+
+* Is it better than other models?
+
+* How well does it fit to the data?
+
+* What are the forecasted values?
+
+* How do we interpret the model?
+
+:::
+
+## Live demo!
+
+<br><br>
+
+::: {.fragment}
+
+See `examples/example_03.R` for full code.
+
+:::
+
+## Exercise 3
+
+Open `exercises/exercise_03.R` for prompts.
+
+* Run `gam.check()` on your GAM from Exercise 2. Do you need to refit?
+
+* Obtain the fitted values.
+
+* Make a forecast for the range of the test data.
+
+* Inspect the contribution of different terms.
+
+```{r}
+#| label: ex-3-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#b20e10",
+  color_text = "#b20e10",
+  color_running_text = "white",
+  color_running_background = "#b20e10",
+  color_finished_text = "#b20e10",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+. . . 
+
+See `exercise_solutions/exercise_solutions_03.R` for full solution.
+
+# When GAMs don't quite work... {background-color="#D9DBDB"}
+
+## Common problems
+
+* Unstable estimates: when a smooth term can be approximated by some combination of the others.
+
+* Computationally expensive for large data sets: see `bam()`.
+
+* Lack of independence between observations: see `gamm()`.
+
+* Unstable predictions outside the range of training data: see [{mvgam}](https://github.com/nicholasjclark/mvgam)
+
+## Are observations independent?
+
+```{r}
+#| echo: true
+#| fig-align: center
+acf(gbr_data$confirmed, main = "ACF plot of confirmed cases")
+```
+
+## Generalized additive mixed effect models (GAMMs)
+
+* Like GAMs, GAMMs allow for non-linear relationships between predictors and the response variable by fitting smooth functions to each predictor.
+
+* GAMMs also allow for the inclusion of random effects, which capture the variability of observations within groups or clusters.
+
+* This includes adding correlation structures.
+
+## Live demo!
+
+<br><br>
+
+::: {.fragment}
+
+See `examples/example_04.R` for full code.
+
+:::
+
+## Exercise 4
+
+Open `exercises/exercise_04.R` for prompts.
+
+* Look at the ACF and PACF plots of the residuals from your previous GAM.
+
+* Try fitting a GAMM model instead.
+
+```{r}
+#| label: ex-4-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#b20e10",
+  color_text = "#b20e10",
+  color_running_text = "white",
+  color_running_background = "#b20e10",
+  color_finished_text = "#b20e10",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+. . . 
+
+See `exercise_solutions/exercise_solutions_04.R` for full solution.
+
+## Additional resources
+
+* GAMs resource list: [github.com/noamross/gam-resources](https://github.com/noamross/gam-resources)
+
+* {mgcv} course: [noamross.github.io/gams-in-r-course](https://noamross.github.io/gams-in-r-course/)
+
+* GAMMs: [r.qcbs.ca/workshop08/book-en/introduction-to-generalized-additive-mixed-models-gamms.html](https://r.qcbs.ca/workshop08/book-en/introduction-to-generalized-additive-mixed-models-gamms.html)
+
+* DGAMs for forecasting: [doi.org/10.1111/2041-210X.13974](https://doi.org/10.1111/2041-210X.13974)
+
+
+## Useful links
+
+GitHub: [github.com/nrennie/f4sg-gams](https://github.com/nrennie/f4sg-gams)
+
+<br>
+
+Slides: [nrennie.github.io/f4sg-gams](https://nrennie.github.io/f4sg-gams)
+
+<br>
+
+Posit Cloud: [posit.cloud/content/7637971](https://posit.cloud/content/7637971)
+
+## 
+
+::: columns
+::: {.column}
+
+<br>
+
+{{< fa brands linkedin >}} [nicola-rennie](https://www.linkedin.com/in/nicola-rennie/)
+
+{{< fa brands mastodon >}} [\@fosstodon.org/\@nrennie](https://fosstodon.org/deck/@nrennie)
+
+{{< fa brands github >}} [nrennie](https://github.com/nrennie)
+
+{{< fa globe >}} [nrennie.rbind.io](https://nrennie.rbind.io/)
+
+{{< fa briefcase >}} [chicas.lancaster-university.uk](https://chicas.lancaster-university.uk/)
+
+:::
+::: {.column}
+
+
+:::
+:::
