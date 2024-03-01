@@ -1,10 +1,10 @@
 title: Lancaster University Quarto Template
-author: Nicola Rennie
+author: Philip Leftwich
 version: 0.0.2
 contributes:
   formats: 
     revealjs:
-      logo: LUlogo.png
+      logo: Uea_phys.png
       theme: LUstyle.scss
       height: 900
       width: 1600

@@ -1,43 +1,79 @@
 ---
-title: "Forecasting with Generalised Additive Models (GAMs) in R"
-subtitle: "Forecasting for Social Good<br><small>21 February 2024</small>"
-author: "Dr Nicola Rennie"
+title: "Introduction to Generalized Linear Models"
+subtitle: "ESA and Physalia Collaboration<br><small>4th March 2024</small>"
+author: "Dr Philip Leftwich"
 format:
   LUstyle-revealjs:
     self-contained: true
     auto-stretch: false
-    footer: "{{< fa envelope >}} [n.rennie@lancaster.ac.uk](mailto:n.rennie@lancaster.ac.uk) {{< fa globe >}} [nrennie.rbind.io](https://nrennie.rbind.io/) {{< fa brands linkedin >}} [nicola-rennie](https://www.linkedin.com/in/nicola-rennie/)"
+    footer: "{{< fa envelope >}} [p.leftwich@uea.ac.uk](mailto: p.leftwich@uea.ac.uk) {{< fa globe >}} [philip.leftwich.github.io](https://philip.leftwich.github.io/) {{< fa brands linkedin >}} [philip-leftwich](https://www.linkedin.com/in/philip-leftwich-117052155/)"
 ---
 
 # Welcome!
+
+```{r}
+#| include: false
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(MuMIn)
+library(arm)
+library(equatiomatic)
+
+library(fitdistrplus)
+
+```
+
+::: columns
+::: {.column .right}
+
+
+:::
+
+::: {.column}
+
+![](images/physalia.png){fig-align="center" fig-alt="physalia logo" width=70%}
+
+:::
+:::
+
 
 ## About me
 
 ::: columns
 ::: {.column .right}
 
-Lecturer in Health Data Science at [Lancaster Medical School](https://chicas.lancaster-university.uk/).
+Associate Professor in Data Science and Genetics at the [University of East Anglia](https://www.uea.ac.uk/).
 
 <br>
 
-Academic background in statistics, with experience in data science consultancy.
+Academic background in ... .
 
 <br>
 
-Blog about R and data science at [nrennie.rbind.io/blog](https://nrennie.rbind.io/blog/).
+Social media at []().
 
 :::
 
 ::: {.column}
 
-![](images/CHICASlogo.png){fig-align="center" fig-alt="CHICAS logo" width=70%}
+![](images/UEA.jpg){fig-align="center" fig-alt="UEA logo" width=70%}
 
 :::
 :::
+
+## Outline
+
+- Why be normal? 
+
+- GLM with binary data
+
+- GLM with count data
 
 ## What to expect during this workshop
 
-The workshop will run for *2 hours*.
+These workshop will run for *2 hours* each.
 
 * Combines slides, live coding examples, and exercises for you to participate in.
 
@@ -58,9 +94,9 @@ I hope you end up with more questions than answers after this workshop!
 
 <br>
 
-![](images/questions.gif){fig-align="center" fig-alt="Stranger Things questions gif" width=80%}
+![](images/great-question.gif){fig-align="center" fig-alt="Schitts Creek questions gif" width=60%}
 
-<small>Source: <a href="https://giphy.com/gifs/netflix-stranger-things-4-st4-cn7GcSZ1KWqO7CJw1B">giphy.com</a></small>
+<small>Source: <a href="https://giphy.com/gifs/schittscreek-64afibPa7ySzhFAf00">giphy.com</a></small>
 
 :::
 :::
@@ -71,21 +107,14 @@ I hope you end up with more questions than answers after this workshop!
 
 * You know how to perform linear regression.
 
+## Introduce yourselves
+
+https://blog.slido.com/virtual-icebreakers/
+
 ## Workshop resources
 
-GitHub: [github.com/nrennie/f4sg-gams](https://github.com/nrennie/f4sg-gams)
-
-<br>
-
-Slides: [nrennie.github.io/f4sg-gams](https://nrennie.github.io/f4sg-gams)
 
 ## Data
-
-We'll be modelling Covid-19 data during the workshop. The data is from the {COVID19} R package.
-
-* For Great Britain and France between January 2021 and January 2022.
-
-* For each day, data on cases, tests, vaccines, deaths, ...
 
 > Guidotti, E., Ardia, D., (2020), “COVID-19 Data Hub”, Journal of Open Source Software 5(51):2376, doi: [10.21105/joss.02376](10.21105/joss.02376).
 
@@ -105,7 +134,1210 @@ covid <- readr::read_csv(
 
 * See `data/` folder on GitHub for pre-processing.
 
-# What are generalised additive models? {background-color="#D9DBDB"}
+
+# General linear models
+
+## Limitations of general linear models
+
+Linearity - 
+good model
+Count data
+Challenger data? 
+
+## A recap on general linear models
+
+## Model assumptions
+
+The equation of a linear model (lm) is given by:
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+$$
+
+where:
+
+- $y_i$ is the predicted value of the response variable.
+
+- $\beta_0$ is the intercept.
+
+- $\beta_1$ is the slope coefficient, representing the change in the response variable for a one-unit change in the explanatory variable.
+
+- $x_i$ is the value of the explanatory variable.
+
+- $\epsilon_i$ represents the residuals of the model, which are assumed to be drawn from a normal distribution with mean zero and a constant variance. This implies that the residuals, or the distances between the observed values and the values predicted by the linear model, can be modeled by drawing random values from a normal distribution.
+
+## Normal distribution of the residuals
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| layout-ncol: 2
+#| message: false
+
+# Define a range of lambda values (average rate of success)
+mean <- rep(c(10,20,30), 3)
+sd <- rep(c(5, 7, 10), each = 3)
+
+# Generate the Poisson distribution data
+norm_data <- map2_df(mean, sd, ~tibble(
+  mean = factor(.x),
+  sd = factor(.y),
+  x = seq(0,40, length.out = 100),
+  density = dnorm(x, .x, .y)
+))  # For ordered plotting
+
+# Plot
+norm_data |> 
+  filter(mean == 20) |> 
+ggplot(aes(x = x, y = density, color = sd)) +
+  geom_line(linewidth = 1.5) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Normal Distribution \nwith different Standard Deviations, Mean = 20",
+       x = "X",
+       y = "Probability",
+       color = "SD") +
+  theme_minimal(base_size = 14)
+
+norm_data |> 
+  filter(sd == 7) |> 
+ggplot(aes(x = x, y = density, color = mean)) +
+  geom_line(linewidth = 1.5) +
+  scale_color_brewer(palette = "Accent") +
+  labs(title = "Change in Normal Distribution \nwith different Means, SD = 7",
+       x = "X",
+       y = "Probability",
+       color = "Mean") +
+  theme_minimal(base_size = 14)
+
+```
+
+
+## 
+
+Another way to write the lm equation is:
+
+$$
+y_i \sim N(\mu = \beta_0 + \beta_1 X_i, \sigma^2)
+$$
+
+Which literally means that $$y_i$$ is drawn from a normal distribution with parameters $$\mu$$ (which depends on $$x_i$$) and $$\sigma$$ (which has the same value for all $$Y$$s).
+
+
+# What are generalised linear models? {background-color="#D9DBDB"}
+
+Put janka ls here with log and Gamma
+
+## Theoretical foundations
+
+
+## Probability distributions and exponential families
+
+## The link function
+
+
+Let's start with linear models...
+
+::: {.center-text}
+
+
+$y_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn +\epsilon_i$
+
+$\epsilon_i = \mathcal{N}(0, \sigma^2)$
+
+
+
+:::
+
+::: {.fragment}
+
+<br>
+
+Then generalised linear models...
+
+::: {.center-text}
+
+$\mu_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn$
+$y_i \sim \mathcal{N}(\mu_i, \sigma^2)$
+
+:::
+
+:::
+
+## Estimation and inference
+
+## Assessing model fit
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+janka <- readr::read_csv("../data/janka.csv")
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+fg <- fitdist(sqrt(janka$hardness), "gamma")
+fn <- fitdist(sqrt(janka$hardness), "norm")
+plot.legend <- c("normal", "gamma")
+denscomp(list(fn, fg), legendtext = plot.legend)
+qqcomp(list(fn, fg), legendtext = plot.legend)
+cdfcomp(list(fn, fg), legendtext = plot.legend)
+ppcomp(list(fn, fg), legendtext = plot.legend)
+```
+
+## Likelihood
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+#| warning: false
+
+# Simulated data
+set.seed(42)
+data <- rnorm(100, mean = 5, sd = 2)
+
+# Define a grid of mu and sigma values
+mu_range <- seq(2, 8, length.out = 100)
+sigma_range <- seq(1, 4, length.out = 100)
+grid <- expand.grid(mu = mu_range, sigma = sigma_range)
+
+# Function to calculate log-likelihood for normal distribution
+log_likelihood <- function(mu, sigma, data) {
+  n <- length(data)
+  -n/2 * log(2 * pi) - n * log(sigma) - 1/(2 * sigma^2) * sum((data - mu)^2)
+}
+
+# Calculate log-likelihood for each combination of mu and sigma
+grid$log_likelihood <- mapply(log_likelihood, mu = grid$mu, sigma = grid$sigma, MoreArgs = list(data = data))
+
+# Plot
+ggplot(grid, aes(x = mu, y = sigma, z = log_likelihood)) +
+  geom_contour_filled(aes(fill = after_stat(level)), bins = 20) + # Use geom_contour_filled for filled contour plots
+  labs(title = "Log-Likelihood Contour Plot",
+       x = expression(mu),
+       y = expression(sigma),
+       fill = "Log-Likelihood") +
+  theme_minimal()
+```
+
+## AIC
+
+# Is a generalized linear model always best?
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+janka <- readr::read_csv("../data/janka.csv")
+
+```
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+janka_ls <- lm(hardness ~ dens, data = janka)
+
+summary(janka_ls)
+```
+
+## Model diagnostics
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+plot(janka_ls, which=2)
+
+plot(janka_ls, which=3)
+```
+
+## Violations of assumptions
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+library(lmtest)
+
+# Breusch-Pagan Test of Homoscedasticity
+bptest(janka_ls)
+
+# Shapiro-Wilk test for normality of residuals
+shapiro.test(residuals(janka_ls))
+
+
+```
+
+
+
+
+## Troublesome transformations
+
+See screenshots
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+janka_sqrt <- lm(sqrt(hardness) ~ dens, data = janka)
+
+plot(janka_sqrt, which=2)
+
+plot(janka_sqrt, which=3)
+
+```
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+janka_log <- lm(log(hardness) ~ dens, data = janka)
+
+plot(janka_log, which=2)
+
+plot(janka_log, which=3)
+
+```
+
+## Polynomials
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+janka_poly <- lm(log(hardness) ~ poly(dens, 2), data = janka)
+
+plot(janka_poly, which=2)
+
+plot(janka_poly, which=3)
+
+```
+
+## Summary polynomial
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+summary(janka_poly)
+
+```
+
+## 
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+ggplot(janka, aes(x = hardness, y = log(dens))) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "lm", formula = (y ~ x)) +  # regression line
+  labs(title = "Linear Regression with ggplot2",
+       x = "X", y = "Y")  # axis labels and title
+
+ggplot(janka, aes(x = hardness, y = log(dens))) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "lm", formula = (y ~ poly(x, 2))) +  # regression line
+  labs(title = "Linear Regression with ggplot2",
+       x = "X", y = "Y")  # axis labels and title
+
+
+
+```
+
+## Box-cox
+
+
+## Weighted least squares
+
+weights = 1/sqrt(hardness): This argument specifies the weights to be used in the fitting process. In this case, the weights are set to be inversely proportional to the square root of hardness.
+
+1/sqrt(hardness): This means that observations with higher values of hardness will have lower weights, and observations with lower values of hardness will have higher weights. This could be used to give more importance to certain observations in the model fitting process.
+data = janka: This specifies the data frame (janka) from which the variables (sqrt(hardness) and dens) are to be taken.
+
+Putting it all together, the code janka_wls <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka) fits a linear model where the response variable is the square root of hardness, the predictor variable is dens, and weights are inversely proportional to the square root of hardness. This is often referred to as a weighted least squares (WLS) regression model, where observations are weighted differently based on certain criteria (in this case, the square root of hardness).
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+janka_wls <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka)
+
+plot(janka_wls, which=2)
+
+plot(janka_wls, which=3)
+
+```
+
+## 
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+prediction_data <- data.frame(dens = sort(unique(janka$dens)))
+predictions <- predict(janka_wls, newdata = prediction_data, interval = "confidence", level = 0.95)
+
+# Adding predictions and confidence intervals to the dataframe
+prediction_data$wls_pred = predictions[, "fit"]
+prediction_data$wls_pred.lwr = predictions[, "lwr"]
+prediction_data$wls_pred.upr = predictions[, "upr"]
+
+ggplot(janka) +
+     geom_ribbon(data = prediction_data, aes(x = dens, ymin = wls_pred.lwr, ymax = wls_pred.upr), alpha = 0.8, fill = "lightgray")+
+    geom_line(data = prediction_data, aes(x = dens, y = wls_pred), color = "blue")+
+  geom_point(aes(x = dens, y = sqrt(hardness)))
+
+```
+
+## Generalized approach
+
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+janka_glm <- glm(hardness ~ dens, data = janka, family = gaussian(link = "sqrt"))
+
+summary(janka_glm)
+
+```
+
+## Gamma distribution
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+janka_gamma <- glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt"))
+
+summary(janka_gamma)
+
+```
+
+## Plot model
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+ggplot(janka, aes(x = dens, y = hardness)) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "glm", method.args = list(Gamma(link = "sqrt"))) +  # regression line
+  labs(title = "Linear Regression with ggplot2",
+       x = "X", y = "Y")  # axis labels and title
+
+
+```
+
+## Exercise
+
+## Challenge
+
+## Compare
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+#| fig-height: 8
+#| message: false
+
+AIC(janka_ls)
+AIC(janka_sqrt)
+AIC(janka_wls)
+AIC(janka_log)
+AIC(janka_glm)
+AIC(janka_poly)
+
+
+library(MuMIn)
+
+# r squared
+
+```
+
+
+# GLMs for binary data
+
+Common response variable in ecological datasets is the binary variable: we observe a phenomenon X or its “absence”
+
+* Presence/Absence of a species
+
+* Presence/Absence of a disease
+
+* Success/Failure to observe behaviour
+
+* Survival/Death of organisms
+
+Wish to determine if $P/A∼ Variable$
+
+Called a logistic regression or logit model
+
+## Binary variables
+
+## Bernoulli Distribution
+
+## Expected values from lm
+
+## Probability distribution
+
+:::: columns
+
+::: {.column}
+$E(Y) = p $
+
+$ y_i = p * (1-p) $
+:::
+
+::: {.column}
+**Mean of distribution** Probability (p) of observing an outcome
+
+**Variance of observed responses** As observed responses approach 0 or 1, the variance of the distribution decreases
+:::
+
+## GLM function
+
+## The link normal
+
+## The link function
+
+If $μ = xβ$ is only true for normally distributed data, 
+then, if this is not the case, we must use a transformation on the expected values:
+
+$$g(μ) = xβ$$
+
+where $g(μ)$ is the link function.
+
+This allows us to relax the normality assumption.
+
+## The logit link
+
+For binary data, the link function is called the logit:
+
+$$ logit(p) = \log \frac{p}{1 - p} $$
+
+where $p$ represents the expected values (probability that $Y = 1$).
+
+To obtain the odds $(p / (1 - p))$, we log-transform them.
+
+## Show odd and transformed odds
+
+
+## The logit link
+
+$$ logit(p) = \log \frac{p}{1 - p} $$
+
+Get the odds $(μ / (1 - μ))$ and log-transform them.
+
+The odds put our expected values on a 0 to +Inf scale.
+
+The log transformation puts our expected values on a -Inf to +Inf scale.
+
+Now, the expected values can be linearly related to the linear predictor.
+
+
+## Exercise
+
+## Challenge
+
+## Predictive power
+
+## Goodness of fit
+
+## Challenge
+
+Malaria data
+
+## Proportion data and GLM
+
+Sometimes, count data aligns more closely with logistic regression methodologies than it initially appears.
+
+We're not looking at typical count data when measuring the number of occurrences with a known total sample size.
+
+Imagine, for example, we're studying the prevalence of a native underbrush species across various forest plots. We assess 15 different plots, each meticulously surveyed for the presence of this underbrush, counting the number of square meters where the underbrush is present versus absent within a standard area:
+
+$$\frac{M^2~\text{with native underbrush (successes)}}{\text{Total surveyed area in}~M^2~(\text{trials})}$$
+
+Bound between zero and one
+
+
+## Binomial distribution
+
+:::: columns
+
+::: {.column}
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+# Define a range of trials
+trial_sizes <- c(5, 10, 20, 50, 100)
+
+# Define the probability of success
+p_success <- 0.7
+
+# Generate the binomial distribution data
+binom_data <- map_df(trial_sizes, ~tibble(
+  trials = .x,
+  success = 0:.x,
+  probability = dbinom(0:.x, .x, p_success)
+)) %>%
+  mutate(trials = factor(trials, levels = trial_sizes)) # This ensures the plots are ordered correctly
+
+# Plot
+ggplot(binom_data, aes(x = success, y = probability, color = trials)) +
+  geom_line() + # Use geom_point() if you prefer dots
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Binomial Distribution with Number of Trials",
+       x = "Number of Successes",
+       y = "Probability",
+       color = "Number of Trials") +
+  theme_minimal()
+
+```
+
+::: 
+
+
+:::{.column}
+
+$ logit(p) = \log \frac{p}{1 - p} $
+
+$ y_i = Binomial(n,p) $
+
+* It is the collection of Bernoulli trials for the same event
+
+* It is represented by the number of Bernoulli trials $n$
+
+* It is also the probability of an event in each trial $p$
+
+:::
+
+
+::::
+
+##
+
+$ P(X = s) = C(n, s) \cdot p^s \cdot (1 - p)^{n - s}$
+
+Where:
+
+- $n$ is the total number of trials of an event.
+- $s$ corresponds to the number of times an event should occur.
+- $p$ is the probability that the event will occur.
+- $(1 - p)$ is the probability that the event will not occur.
+- $C$ term represents combinations, calculated as $C(n, s) = \frac{n!}{s!(n - s)!}$, representing the number of ways to choose $s$ successes out of $n$ trials.
+
+
+## Example
+
+TEXT
+
+:::: columns
+
+::: {.column}
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+# According to the situation:
+# n = 5,
+# s = 5,
+# p = 0.95,
+# (1 — p) = 0.05
+
+p = 1 * (0.95)^(5) * (0.05)^(0)
+
+p
+
+```
+:::
+
+::: {.column}
+
+```{r}
+
+dbinom(5, 5, 0.95)
+
+```
+:::
+
+
+## Binomial VS Bernoulli Keypoints!
+
+Bernoulli deals with the outcome of the single trial of the event, whereas Binomial deals with the outcome of the multiple trials of the single event.
+
+Bernoulli is used when the outcome of an event is required for only one time, whereas the Binomial is used when the outcome of an event is required multiple times.
+
+## Exercise
+
+## Weights
+
+## Predictions/write-up
+
+## Overdispersion
+
+:::: columns
+
+::: {.column}
+**Binomial**
+$P(X = s) = C(n, s) \cdot p^s \cdot (1 - p)^{n - s}$
+
+:::
+
+:::{.column}
+**Quasibinomial**
+$P(X = s) = C(n, s) \cdot p(p+k\theta)^{s-1} \cdot (1 - pk\theta)^{n - s}$
+
+:::
+
+::::
+
+Where:
+
+- $n$ is the total number of trials of an event.
+- $s$ corresponds to the number of times an event should occur.
+- $p$ is the probability that the event will occur.
+- $(1 - p)$ is the probability that the event will not occur.
+- $C$ term represents combinations, calculated as $C(n, s) = \frac{n!}{s!(n - s)!}$, representing the number of ways to choose $s$ successes out of $n$ trials.
+
+- $\theta$ term describes additional variance outside of the Binomial distribution
+
+
+# GLMs for count data
+
+## Poisson
+
+:::: columns
+
+::: {.column}
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+# Define a range of lambda values (average rate of success)
+lambda_values <- c(1, 4, 10, 20, 50)
+
+# Generate the Poisson distribution data
+poisson_data <- map_df(lambda_values, ~tibble(
+  lambda = .x,
+  events = 0:75, # Assuming a reasonable range for visualization
+  probability = dpois(0:75, .x)
+)) |> 
+  mutate(lambda = factor(lambda, levels = lambda_values)) # For ordered plotting
+
+# Plot
+ggplot(poisson_data, aes(x = events, y = probability, color = lambda)) +
+  geom_line(linewidth = 1.5) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Poisson Distribution with Different Lambda",
+       x = "Number of Events",
+       y = "Probability",
+       color = "Lambda") +
+  theme_minimal(base_size = 14)
+
+```
+
+::: 
+
+::: {.column}
+
+Count or rate data are ubiquitous in the life sciences (e.g number of parasites per microlitre of blood, number of species counted in a particular area). These type of data are **discrete** and **non-negative**.
+
+A useful distribution to model abundance data is the **Poisson** distribution: 
+
+a discrete distribution with a single parameter, λ (lambda), which defines both the mean and the variance of the distribution.
+
+:::
+
+
+::::
+
+## GLM
+
+::: {.incremental}
+
+Recall the simple linear regression case (i.e a GLM with a Gaussian error structure and identity link). For the sake of clarity let's consider a single explanatory variable where $\mu$ is the mean for *Y*:
+
+$\mu_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn$
+
+$y_i \sim \mathcal{N}(\mu_i, \sigma^2)$
+
+* The mean function is **unconstrained**, i.e the value of $\beta_0 + \beta_1X$ can range from $-\infty$ to $+\infty$. 
+
+* If we want to model count data we therefore want to **constrain** this mean to be positive only. 
+
+* Mathematically we can do this by taking the **logarithm** of the mean (the log is the default link for the Poisson distribution). 
+
+* We then assume our count data variance to be Poisson distributed (a discrete, non-negative distribution), to obtain our Poisson regression model (to be consistent with the statistics literature we will rename $\mu$ to $\lambda$):
+
+:::
+
+## GLM Poisson
+
+![](images/poisson_regression.webp){fig-align="center" fig-alt="Poisson equation" width=100%}
+
+## Poisson limitations
+
+The **Poisson** distribution has the following characteristics:
+
+::: {.incremental}
+
+* **Discrete** variable (integer), defined on the range $0, 1, \dots, \infty$.
+
+* A single ***rate*** parameter $\lambda$, where $\lambda > 0$.
+
+* **Mean** = $\lambda$  
+
+* **Variance** = $\lambda$
+
+:::
+
+
+## Poisson: Case study
+
+:::: columns
+
+::: {.column}
+
+![](images/cuckoo.jpg){fig-align="center" fig-alt="Cuckoo" width=50%}
+:::
+
+:::{.column}
+
+In a study by [Kilner *et al.* (1999)](http://www.nature.com/nature/journal/v397/n6721/abs/397667a0.html), the authors
+studied the begging rate of nestlings in relation to total mass of the brood of **reed warbler chicks** and **cuckoo chicks**.
+The question of interest is:
+
+> How does nestling mass affect begging rates between the different species?
+
+:::
+
+::::
+
+##
+
+This model is inadequate. It is predicting **negative** begging calls *within* the 
+range of the observed data, which clearly does not make any sense.
+
+```{r}
+#| eval: false
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+cuckoo_lm <- lm(Beg ~ Mass + Species + Mass:Species, data = cuckoo)
+```
+
+
+```{r}
+#| include: FALSE
+
+cuckoo <- read_csv("../data/cuckoo.csv")
+
+```
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+
+cuckoo_lm <- lm(Beg ~ Mass + Species + Mass:Species, data = cuckoo)
+
+broom::augment(cuckoo_lm, type.predict = "response") %>% 
+ggplot(aes(x=Mass, y=.fitted, colour=Species)) + 
+  geom_point() +
+  geom_line()+
+  geom_hline(yintercept = 0, linetype = "dashed")+
+  scale_colour_manual(values=c("green3","turquoise3"))+
+  scale_x_continuous(limits = c(0,40)) +
+  theme_minimal()
+
+
+
+```
+
+
+## Diagnostics
+
+Let us display the model diagnostics plots for this linear model.
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 8
+
+plot(cuckoo_lm, which=2)
+
+plot(cuckoo_lm, which=3)
+```
+
+
+* Curvature
+
+* Funnelling effect
+
+
+## Biological data and distributions
+
+fitdistrplus?
+
+## Poisson model
+
+We should therefore try a different model structure.
+
+The response variable in this case is a classic **count data**: **discrete** and bounded below by zero (i.e we cannot have negative counts). We will therefore try a **Poisson model** using the canonical **log** link function for the mean:
+
+
+* λ varies with x (mass) which means residual variance will also vary with 
+x, which means that we just relaxed the homogeneity of variance assumption!
+
+* Predicted values will now be integers instead of fractions
+
+* The model will never predict negative values (Poisson is strictly positive)
+
+$$
+    \log{\lambda} = \beta_0 + \beta_1 M_i + \beta_2 S_i + \beta_3 M_i S_i
+$$
+
+where $M_i$ is nestling mass and $S_i$ a **dummy** variable
+
+$S_i = \left\{\begin{array}{ll}1 & \text{if } i \text{ is warbler},\\0 & \text{otherwise}.\end{array}\right.$
+
+The term $M_iS_i$ is an **interaction** term. Think of this as an additional explanatory variable in our model.
+Effectively it lets us have **different** slopes for different species (without an interaction term we assume that
+both species have the same slope for the relationship between begging rate and mass, and only the intercept differ).
+
+## Regression lines
+
+The mean regression lines for the two species look like this:
+
+::: {.incremental}
+
+* **Cuckoo** ($S_i=0$)
+
+* $\begin{aligned}\log{\lambda} & = \beta_0 + \beta_1 M_i + (\beta_2 \times 0)  + (\beta_3 \times M_i \times 0)\\\log{\lambda} & = \beta_0 + \beta_1 M_i\end{aligned}$
+    
+
+
+* **Warbler** ($S_i=1$)
+
+* $\begin{aligned}\log{\lambda} & = \beta_0 + \beta_1 M_i + (\beta_2 \times 1)  + (\beta_3 \times M_i \times 1)\\\log{\lambda} & = \beta_0 + \beta_1 M_i + \beta_2 + \beta_3M_i\\\end{aligned}$
+
+:::
+
+
+## Fit the Poisson model
+
+Fit the model with the interaction term in R:
+
+```{r}
+#| echo: true
+
+cuckoo_glm1 <- glm(Beg ~ Mass + Species + Mass:Species, data=cuckoo, family=poisson(link="log"))
+
+summary(cuckoo_glm1)
+```
+
+> Note there appears to be a negative interaction effect for Species:Mass, indicating that Begging calls do not increase with mass as much as you would expect for Warblers as compared to Cuckoos.
+
+
+## Exercise 
+
+Open `exercises/exercise_04.R` for prompts.
+
+* Fit a Poisson model to the cuckoo data
+
+* Look at the residual plots - how have they changed? 
+
+
+```{r}
+#| label: ex-pois-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+
+## Model summary
+
+## Parameter estimates
+
+## Deviance
+
+## Poisson model check
+
+```{r}
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 8
+
+plot(cuckoo_glm1, which=2)
+
+plot(cuckoo_glm1, which=3)
+```
+
+## Chi-squared tests
+
+
+## Offset - for rates
+
+```{r}
+
+cuckoo_glm2 <- glm(Call_Total ~ Mass + Species + Mass:Species, data=cuckoo, offset = log(Mins), family=poisson(link="log"))
+
+```
+
+
+## Poisson limitations
+
+So for the Poisson regression case we assume that the mean and variance are the same.
+Hence, as the mean *increases*, the variance *increases* also (**heteroscedascity**).
+This may or may not be a sensible assumption so watch out! Just because a Poisson distribution *usually* fits well for count data, doesn't mean that a Gaussian distribution *can't* always work.
+
+Recall the link function between the predictors and the mean and the rules of logarithms (if $\log{\lambda} = k$(value of predictors), then $\lambda = e^k$):
+
+
+
+## Overdispersion
+
+When the residual deviance is higher than the residual degrees of freedom, we say that the model is overdispersed. This situation is mathematically represented as:
+
+$$
+\phi = \frac{\text{Residual deviance}}{\text{Residual degrees of freedom}}
+$$
+
+Overdispersion occurs when the variance in the data is even higher than the mean, indicating that the Poisson distribution might not be the best choice. This can be due to many reasons, such as the presence of many zeros, many very high values, or missing covariates in the model.
+
+### Solutions
+
+| Causes of over-dispersion | What to do about it | 
+|---------|:-----|
+| Model mis-specification (missing covariates or interactions)    | Add more covariates or interaction terms   |
+| Too many zeros ("zero inflation")    | Use a zero-inflated model  |
+| Non-independence of observations       | Use a generalised mixed model with random effects to take non-independence into account    |
+| Variance is larger than the mean      | Use a quasipoisson GLM if overdispersion = 2-15. Use a negative binomial GLM if > 15-20  |
+
+: Overdispersion statistic values > 1
+
+
+## Quasi-Poisson GLM 
+
+$$
+    \log{\lambda} = \beta_0 + \beta_1 M_i + \beta_2 S_i + \beta_3 M_i S_i
+$$
+
+$$
+Y_i = Poisson(\phi \lambda_i)
+$$
+
+
+Where:
+
+- $Yi$ is the response variable.
+- $\phi$ is the dispersion parameter, which adjusts the variance of the distribution
+
+## F distributions
+
+## Negative Binomial
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+##Negative Binomial Distribution (Varying Shape Parameter r)
+#In the negative binomial distribution:
+  
+#  Shape Parameter (r): Represents the number of successes required before the experiment is stopped.
+#Probability of Success (p): Represents the probability of success in each Bernoulli trial.
+#As r increases:
+  
+#  The distribution becomes more skewed to the right.
+#The average number of failures before success increases.
+#The variance of the distribution also increases, indicating greater variability.
+
+# Function to generate negative binomial distribution data
+generate_nbinom_data <- function(r, p) {
+  tibble(failures = 0:(10*r), 
+         probability = dnbinom(0:(10*r), size = r, prob = p))
+}
+
+# Define range of shape parameter values (r)
+r_values <- rep(c(2, 5, 10), times = 3)  # Number of successes
+
+# Fixed probability of success
+p_fixed <- rep(c(0.2, 0.4, 0.6), each = 3)  
+
+# Generate negative binomial distribution data for different r values
+nbinom_data <- map2_df(r_values, p_fixed, ~generate_nbinom_data(r = .x, p = .y) 
+                      %>% mutate(r = as.factor(.x)) %>% mutate(p = as.factor(.y))) 
+
+# Plot for negative binomial distribution
+ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = interaction(r,p))) +
+  geom_line() +
+  scale_color_brewer(palette = "Dark2")+
+  labs(title = "Negative Binomial Distribution with Varying Shape Parameter (r)",
+       x = "Number of Failures",
+       y = "Probability",
+       color = "Number of Successes (r)") +
+  theme_minimal()+
+  facet_wrap(~p)+
+  gghighlight::gghighlight()
+
+```
+
+## Negative Binomial
+
+Negative binomial GLMs are favored when overdispersion is high.
+
+It has two parameters, $μ$ and $k$. $k$ controls for the dispersion parameter (smaller $k$ indicates higher dispersion). It corresponds to a combination of two distributions (Poisson and gamma).
+
+It assumes that the $Y_i$ are Poisson distributed with the mean $μ_i$ assumed to follow a gamma distribution:
+
+$$
+E(Y_i) = μ_i \\
+\text{Var}(Y_i) = μ_i + μ_i^2/k
+$$
+
+
+## Fitting a negative binomial in R
+
+## Zero-inflation
+
+When the data comprise an excess number of zeros, that arise from a different process than the process that generates the counts.
+
+
+RETURN TO CUCKOO DATA! 
+
+
+# Other distributions
+
+## Gamma
+
+:::: columns
+
+::: {.column}
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+# Define a range of shape values
+shape_values <- c(1, 2, 5, 10)
+scale_value <- 2 # Keep scale fixed for simplicity
+
+# Generate the Gamma distribution data
+gamma_data <- map_df(shape_values, ~tibble(
+  shape = .x,
+  x = seq(0, 20, length.out = 100),
+  density = dgamma(seq(0, 20, length.out = 100), shape = .x, scale = scale_value)
+)) %>%
+  mutate(shape = factor(shape, levels = shape_values)) # For ordered plotting
+
+# Plot
+ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
+  geom_line() +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Gamma Distribution with Different Shape Parameters",
+       x = "Value",
+       y = "Density",
+       color = "Shape Parameter") +
+  theme_minimal()
+
+```
+
+::: 
+
+::: {.column}
+
+Second column
+
+:::
+
+::::
+
+# Simulate
+
+
+# Survival
+
+```{r}
+#| eval: false
+#| echo: false
+
+model3 <- survreg((Surv(`Hours`, event) ~ source * supplementation), data = data2, dist = "weibull")
+lin.pred <- predict(model3, type = "lp")[data2$event ==1]
+log.resid <- log(data2$`Hours`[data2$event==1]) - lin.pred
+car::qqPlot(exp(log.resid), dist = "weibull", shape = 1/model3$scale)
+```
 
 ## Sometimes relationships are easy to spot...
 
@@ -285,11 +1517,11 @@ Open `exercises/exercise_01.R` for prompts.
 #| label: ex-1-timer
 countdown::countdown(
   minutes = 10,
-  color_border = "#b20e10",
-  color_text = "#b20e10",
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
   color_running_text = "white",
-  color_running_background = "#b20e10",
-  color_finished_text = "#b20e10",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
   color_finished_background = "white",
   top = 0,
   margin = "1.2em",
@@ -393,11 +1625,11 @@ Open `exercises/exercise_02.R` for prompts.
 #| label: ex-2-timer
 countdown::countdown(
   minutes = 10,
-  color_border = "#b20e10",
-  color_text = "#b20e10",
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
   color_running_text = "white",
-  color_running_background = "#b20e10",
-  color_finished_text = "#b20e10",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
   color_finished_background = "white",
   top = 0,
   margin = "1.2em",
@@ -537,26 +1769,9 @@ See `exercise_solutions/exercise_solutions_04.R` for full solution.
 
 ## Additional resources
 
-* GAMs resource list: [github.com/noamross/gam-resources](https://github.com/noamross/gam-resources)
-
-* {mgcv} course: [noamross.github.io/gams-in-r-course](https://noamross.github.io/gams-in-r-course/)
-
-* GAMMs: [r.qcbs.ca/workshop08/book-en/introduction-to-generalized-additive-mixed-models-gamms.html](https://r.qcbs.ca/workshop08/book-en/introduction-to-generalized-additive-mixed-models-gamms.html)
-
-* DGAMs for forecasting: [doi.org/10.1111/2041-210X.13974](https://doi.org/10.1111/2041-210X.13974)
+* GLMs resource list: 
 
 
-## Useful links
-
-GitHub: [github.com/nrennie/f4sg-gams](https://github.com/nrennie/f4sg-gams)
-
-<br>
-
-Slides: [nrennie.github.io/f4sg-gams](https://nrennie.github.io/f4sg-gams)
-
-<br>
-
-Posit Cloud: [posit.cloud/content/7637971](https://posit.cloud/content/7637971)
 
 ## 
 
@@ -565,15 +1780,15 @@ Posit Cloud: [posit.cloud/content/7637971](https://posit.cloud/content/7637971)
 
 <br>
 
-{{< fa brands linkedin >}} [nicola-rennie](https://www.linkedin.com/in/nicola-rennie/)
+{{< fa brands linkedin >}} [philip-leftwich](https://www.linkedin.com/in/philip-leftwich-117052155/)
 
-{{< fa brands mastodon >}} [\@fosstodon.org/\@nrennie](https://fosstodon.org/deck/@nrennie)
+{{< fa brands mastodon >}} [\@ecoevo.social\@PhilipLeftwich](https://ecoevo.social/@PhilipLeftwich)
 
-{{< fa brands github >}} [nrennie](https://github.com/nrennie)
+{{< fa brands github >}} [PhilipLeftwich](https://github.com/Philip-Leftwich)
 
-{{< fa globe >}} [nrennie.rbind.io](https://nrennie.rbind.io/)
+{{< fa globe >}} [philip.leftwich.github.io](https://philip.leftwich.github.io/)
 
-{{< fa briefcase >}} [chicas.lancaster-university.uk](https://chicas.lancaster-university.uk/)
+
 
 :::
 ::: {.column}
