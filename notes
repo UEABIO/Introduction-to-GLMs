@@ -1,0 +1,94 @@
+
+knitr::purl("slides/index.qmd")
+
+list.functions.in.file("index.R")
+
+
+## Outline (50mins per topic?)
+
+1.   A Very Short Introduction to R and Useful Packages: This session briefly overviews the R programming language and introduces participants to essential R packages for data analysis.
+2. (General) Linear Models (LMs): Explore the fundamental concepts and applications of linear regression analysis
+3. Generalized Linear Models (GLMs): Building upon linear models, this session extends the framework to accommodate non-normal response variables, introducing concepts like link functions and exponential families.
+
+8.   GLMs for Binomial Data: Focus on applying GLMs to binomial data, covering logistic regression and addressing issues related to modelling binary response variables.
+9.   GLMs for Binary Data: This session addresses GLMs for binary data, providing insights into logistic regression and its applications in modelling dichotomous outcomes.
+
+
+5.   GLMs for Count Data: Delve into applying GLMs for count data, examining the Poisson distribution and addressing modelling challenges specific to count variables.
+6.   GLMs for Over-dispersed Count Data: Explore techniques for handling over-dispersion in count data within the GLM framework, emphasizing practical approaches to improve model accuracy.
+7.   GLMs for Zero-Inflated Data: Investigate modelling techniques for datasets with excess zeros, understanding how to address the specific challenges posed by zero-inflated count data.
+
+
+Power Analysis
+
+Survival Analysis?
+
+10. Other Family Distributions: Explore alternative family distributions within the GLM framework, specifically focusing on the Gamma distribution and its applications in modelling continuous, positive-valued responses.
+
+
+
+
+## Slides
+
+https://r.qcbs.ca/Workshops/
+
+
+Fitdistrplus: https://towardsdatascience.com/your-data-isnt-normal-54fe98b1f322
+https://rpubs.com/Liam-O/Data604_Wk6
+
+
+Standardises and Pearson residuals! 
+
+Learn Distributions: https://bookdown.org/gabriel_butler/ECON41Labs/lab-4-part-1-the-binomial-distribution.html#your-tasks-3
+
+GLM tutorials: https://fukamilab.github.io/BIO202/04-B-binary-data.html
+
+
+Log-likelihood : https://www.statisticshowto.com/log-likelihood-function/#:~:text=The%20log%20likelihood%20function%20frequently,(log%2Dlikelihood)%20%2B%202K
+
+
+maximum likelihood: https://psu-psychology.github.io/psy-597-sem-sp2019/04_latent_variables_estimation/maximum_likelihood.html#sample-likelihood-function
+
+LRT: https://towardsdatascience.com/the-most-important-statistical-test-dee01f4d50cf
+https://api.rpubs.com/tomanderson_34/lrt
+https://evomics.org/resources/likelihood-ratio-test/
+
+https://seantrott.github.io/model_comparison/presentation.html#94
+
+
+## Residuals
+https://pj.freefaculty.org/guides/stat/Regression-GLM/GLM2-SigTests/GLM-2-guide.pdf
+
+## Logistic regression:
+https://www.slideshare.net/AdrianOlszewski1/logistic-regression-vs-logistic-classifier?trk=v-feed
+
+
+# hazard models - https://devinincerti.com/2019/06/18/parametric_survival.html#shapes-of-hazard-functions
+https://ethz.ch/content/dam/ethz/special-interest/math/statistics/sfs/Education/Advanced%20Studies%20in%20Applied%20Statistics/course-material-1719/Survival/slides02-handout.pdf
+
+
+## Reading?
+
+https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12552
+
+https://besjournals.onlinelibrary.wiley.com/doi/pdf/10.1111/j.2041-210X.2010.00021.x
+
+
+## Data
+
+Binary data: mayflies, bacteria, malaria
+
+Examples: https://www.modernstatisticswithr.com/regression.html#generalised-linear-models
+
+Monarchs in gardens - simple poisson. 
+
+https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/generalized-linear-models-i-count-data.html - 
+Parasite worked example - use negbin to accurately model
+
+cuckoo - needs zeroinflation! 
+
+Warbler data - predict malaria risk by age and size - Dave R data - Bernoulli model
+
+Beetles - shows weights and cbind. overdispersion? 
+
+Slugs: https://environmentalcomputing.net/statistics/glms/glm-2/ - needs zeroinflation.
