@@ -28,6 +28,7 @@ library(fitdistrplus)
 library(emmeans)
 library(gtsummary)
 library(sjPlot)
+library(car)
 
 ```
 
@@ -732,6 +733,8 @@ janka |>
 
 ## Challenge
 
+<br><br>
+
 * Fit the Linear Model `lm(hardness ~ dens, data = janka)` to the janka data.
 
 * Evaluate the model fit
@@ -1218,8 +1221,8 @@ qqcomp(list(fn, fg), legendtext = plot.legend)
 library(fitdistrplus)
 
 par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
-fg <- fitdist(sqrt(janka$hardness), "gamma")
-fn <- fitdist(sqrt(janka$hardness), "norm")
+fg <- fitdist((janka$hardness), "gamma")
+fn <- fitdist((janka$hardness), "norm")
 plot.legend <- c("normal", "gamma")
 denscomp(list(fn, fg), legendtext = plot.legend)
 qqcomp(list(fn, fg), legendtext = plot.legend)
@@ -1513,6 +1516,7 @@ log_likelihood_visual()
 
 ## Exercise
 
+<br><br>
 
 * Use the log-likelihood function with varying values of the mean and sd
 
@@ -1979,7 +1983,7 @@ Fitting a linear regression vs a logit-link regression:
 
 ```{r}
 #| eval: true
-#| echo: true
+#| echo: false
 #| fig-height: 7
 #| layout-ncol: 2
 #| message: false
@@ -2529,14 +2533,6 @@ countdown::countdown(
 
 ## Challenge
 
-* Using the malaria dataset fit a binomial glm to look at the predictors of malaria in the Seychelles warbler
-
-* Check the model fit
-
-* Make predictions
-
-* Produce a suitable figure
-
 ```{r}
 #| label: ex-malaria-timer
 countdown::countdown(
@@ -2552,6 +2548,29 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
+
+:::: columns
+
+::: {.column}
+
+![](images/warbler.jpeg){fig-align="center" fig-alt="Seychelles warbler" width=60%}
+:::
+
+:::{.column}
+
+<br><br>
+
+* Using the malaria dataset fit a binomial glm to look at the predictors of malaria in the Seychelles warbler
+
+* Check the model fit
+
+* Make predictions
+
+* Produce a suitable figure
+
+:::
+
+::::
 
 
 # GLMs for Binomial data {background-color="#D9DBDB"}
@@ -2797,6 +2816,10 @@ This means the variance is greater than predicted by the binomial distribution
 
 Overdispersion > 1.5 can be accounted for with the *quasi-binomial* glm
 
+```{r}
+summary(beetle_glm_weights)
+```
+
 ## Overdispersion
 
 :::: columns
@@ -2887,22 +2910,45 @@ ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
 
 :::: columns
 
-::: {.column}
 
-![](images/cuckoo.jpg){fig-align="center" fig-alt="Cuckoo" width=50%}
-
-:::
-
-::: {.column}
-
+::: {.column width="60%"}
 
 On the afternoon of January 28th, 1986 the space shuttle Challenger experienced a critical failure and broke apart in mid air, resulting in the deaths of all seven crewmembers.
 
-After an investigation into the incident, it was discovered that the failure was caused by critical failurs in all six of the O-rings in the solid rocket booster. Additionally, it was revealed that such an incident was foreseeable.
+An investigation discovered critical failures in all six of the O-rings in the solid rocket booster.
+
+The question of interest is:
+
+> How does temperature affect the probability of o-ring failure?
+
+> What was the probability of all o-rings failing when the temperature was 36 degrees F
+
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| label: ex-challenger-timer
+countdown::countdown(
+  minutes = 20,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+![](images/space-shuttle.jpg){fig-align="center" fig-alt="Challenger" width=60%}
 
 :::
 
 ::::
+
 
 # GLMs for count data {background-color="#D9DBDB"}
 
@@ -2968,7 +3014,14 @@ $y_i \sim \mathcal{N}(\mu_i, \sigma^2)$
 
 * The mean function is **unconstrained**, i.e the value of $\beta_0 + \beta_1X$ can range from $-\infty$ to $+\infty$. 
 
+:::
+
+## Poisson
+
+
 * If we want to model count data we therefore want to **constrain** this mean to be positive only. 
+
+:::{.incremental}
 
 * Mathematically we can do this by taking the **logarithm** of the mean (the log is the default link for the Poisson distribution). 
 
@@ -3084,7 +3137,59 @@ plot(cuckoo_lm, which=3)
 
 ## Biological data and distributions
 
-fitdistrplus?
+We can look at the kurtosis and skewness of our univariate variable - Begging: 
+
+```{r}
+#| echo: true
+#| fig-height: 7
+
+descdist(cuckoo$Beg, boot = 500, discrete = T)
+
+```
+
+## Univariate distributions
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: false
+#| fig-height: 7
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(cuckoo$Beg, "pois")
+fn <- fitdist(cuckoo$Beg, "norm")
+fnb<- fitdist(cuckoo$Beg, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: false
+#| fig-height: 7
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(cuckoo$Beg, "pois")
+fn <- fitdist(cuckoo$Beg, "norm")
+fnb<- fitdist(cuckoo$Beg, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+```
+
+:::
+
+::::
+
 
 ## Poisson model
 
@@ -3099,6 +3204,12 @@ x, which means that we just relaxed the homogeneity of variance assumption!
 * Predicted values will now be integers instead of fractions
 
 * The model will never predict negative values (Poisson is strictly positive)
+
+$$
+    \log{\lambda} = \beta_0 + \beta_1 M_i + \beta_2 S_i + \beta_3 M_i S_i
+$$
+
+## Poisson model
 
 $$
     \log{\lambda} = \beta_0 + \beta_1 M_i + \beta_2 S_i + \beta_3 M_i S_i
@@ -3148,7 +3259,6 @@ summary(cuckoo_glm1)
 
 ## Exercise 
 
-Open `exercises/exercise_04.R` for prompts.
 
 * Fit a Poisson model to the cuckoo data
 
@@ -3174,9 +3284,25 @@ countdown::countdown(
 
 ## Model summary
 
-## Parameter estimates
+```{r}
+#| echo: true
 
-## Deviance
+summary(cuckoo_glm1)
+
+```
+
+## Residuals
+
+```{r}
+#| echo: true
+#| layout-ncol: 2
+
+plot(cuckoo_glm1, which=2)
+plot(cuckoo_glm1, which=3)
+
+```
+
+
 
 ## Poisson model check
 
@@ -3190,28 +3316,114 @@ plot(cuckoo_glm1, which=2)
 plot(cuckoo_glm1, which=3)
 ```
 
-## Mean-centering
+## VIF
+
+::::{.columns}
+
+:::{.column}
+
+VIF, or Variance Inflation Factor, measures the extent of multicollinearity among independent variables in regression analysis.
+
+
+High multicollinearity, indicated by elevated VIF values, can distort regression coefficients and inflate standard errors, undermining the reliability of the model's predictions
 
 ```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+
+
+car::vif(cuckoo_glm1)
+
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+
+check_model(cuckoo_glm1, check = "vif")
+
+```
+
+:::
+
+::::
+
+## Mean-centering
+
+True VIF is highly problematic 
+
+- Mean centering can remove apparent VIF as means become zero
+
+- This often decreases potential correlation
+
+```{r}
+#| eval: true
+#| echo: true
 
 cuckoo$mass.c <- cuckoo$Mass - mean(cuckoo$Mass, na.rm =T)
 
 cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=poisson(link="log"))
+
+summary(cuckoo_glm2)
+
 ```
 
 
+## Exercise 
+
+<br><br>
+
+
+* `cuckoo$mass.c <- cuckoo$Mass - mean(cuckoo$Mass, na.rm =T)`
+
+* Mean center the mass variable and recheck VIF.
+
+
+```{r}
+#| label: ex-vif-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
 ## Model selection
 
-Likelihood ratio tests, AIC - exercise/reminder?
+For a term with only one degree of freedom $z^2$ = the chi-square value
 
+The likelihood ratio test allows us to determine whether we can remove an interaction term
 
-## Exercise
+```{r}
+#| eval: true
+#| echo: true
 
-Look at the effect of mean-centering on estimates
+# For a fixed  mean-variance model we use a Chisquare distribution
+drop1(cuckoo_glm2, test = "Chisq")
+
+```
+
 
 ## Offset - for rates
 
+In Poisson GLMs, using an offset allows us to model rates rather than counts, by including the logarithm of the exposure variable as an offset, ensuring that the model accounts for the differing exposure levels across observations.
+
 ```{r}
+#| eval: true
+#| echo: true
 
 cuckoo_glm3 <- glm(Call_Total ~ mass.c + Species + mass.c:Species, data=cuckoo, offset = log(Mins), family=poisson(link="log"))
 
@@ -3239,7 +3451,7 @@ $$
 
 Overdispersion occurs when the variance in the data is even higher than the mean, indicating that the Poisson distribution might not be the best choice. This can be due to many reasons, such as the presence of many zeros, many very high values, or missing covariates in the model.
 
-### Solutions
+## Overdispersion and what to do about it
 
 | Causes of over-dispersion | What to do about it | 
 |---------|:-----|
@@ -3250,6 +3462,22 @@ Overdispersion occurs when the variance in the data is even higher than the mean
 
 : Overdispersion statistic values > 1
 
+
+## Overdispersion and what to do about it
+
+It may be true that you are initially unsure whether overdispersion is coming from zero-inflation, larger variance than the mean or both. 
+
+You can fit models with the same dependent and independent variables and different error structures and use AIC to help determine the best model for your data
+
+## Overdispersion in the cuckoo model
+
+```{r}
+#| eval: true
+#| echo: true
+
+summary(cuckoo_glm2)
+
+```
 
 ## Quasi-Poisson GLM 
 
@@ -3275,12 +3503,14 @@ Confidence intervals and p-values WILL change.
 
 ## Exercise
 
-Open `exercises/exercise_04.R` for prompts.
 
-* Fit a quasipoisson model to the cuckoo data or update the previous one
+* Fit a quasipoisson model to the cuckoo data
 
 ```{r}
+#| eval: true
+#| echo: true
 
+cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=quasipoisson(link="log"))
 ```
 
 * Look at the residual plots - how have they changed? 
@@ -3289,16 +3519,20 @@ Open `exercises/exercise_04.R` for prompts.
 
 * Calculate new 95% confidence intervals
 
-## Summary
-
-## Deviance analysis
 
 ## F distributions
 
-The presence of overdispersion suggested the use of the F-test for nested models. We will test if the squared term can be dropped from the model.
+The presence of overdispersion suggested the use of the F-test for nested models. We will test if the interaction term can be dropped from the model.
 
-https://towardsdatascience.com/the-most-important-statistical-test-dee01f4d50cf
+Though here for a term with only one degree of freedom $t^2$ = the F distribution with denominator degree of freedom
 
+```{r}
+#| eval: true
+#| echo: true
+
+drop1(cuckoo_glm2, test = "F")
+
+```
 
 ## Zero-inflation
 
@@ -3341,14 +3575,14 @@ In a ZIP model we define two halves of the model; the first half models the coun
 ```{r}
 #| eval: false
 #| echo: true
-#| 
+
 install.packages("pscl")
 ```
 
 ```{r}
 #| eval: false
 #| echo: true
-#| 
+library(pscl)
 zip1 <- zeroinf(y ~ x1 + x2 | x1 + x2,
                 dist = "poisson",
                 link = "logit",
@@ -3378,19 +3612,78 @@ y ~ x1 + x2 | z1 +z2
 ## Checking for zero-inflation
 
 
-RETURN TO CUCKOO DATA! 
+```{r}
+#| eval: true
+#| echo: true
 
+hist(cuckoo$Beg)
+
+```
+
+
+```{r}
+#| eval: true
+#| echo: true
+
+check_zeroinflation(cuckoo_glm2)
+
+```
 
 ## Fit the model
 
+Fit the model 
 
-## AIC
+```{r}
+#| echo: true
+
+cuckoo_zip <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
+                   mass.c + Species + mass.c:Species,
+                dist = "poisson",
+                link = "logit",
+                data = cuckoo)
+
+summary(cuckoo_zip)
+
+```
 
 
-## Diagnostics
+## Model validation
 
+Model validation is not straightforward for zero-inflated models
+
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| echo: true
+
+sresid <- residuals(cuckoo_zip, type = "pearson")
+
+pred <- predict(cuckoo_zip)
+
+
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: true
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+hist(sresid)
+plot(sresid ~ pred)
 qqnorm(sresid)
 qqline(sresid, col = "red")
+
+```
+:::
+
+::::
 
 
 ## Negative Binomial
@@ -3399,6 +3692,7 @@ qqline(sresid, col = "red")
 #| eval: true
 #| echo: false
 #| fig-height: 8
+#| fig-width: 10
 #| message: false
 
 ##Negative Binomial Distribution (Varying Shape Parameter r)
@@ -3446,7 +3740,7 @@ ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = intera
 
 Negative binomial GLMs are favored when overdispersion is high.
 
-It has two parameters, $μ$ and $k$. $k$ controls for the dispersion parameter (smaller $k$ indicates higher dispersion). It corresponds to a combination of two distributions (Poisson and gamma).
+It has two parameters, $μ$ and $\theta$. $\theta$ controls for the dispersion parameter (smaller $\theta$ indicates higher dispersion). It corresponds to a combination of two distributions (Poisson and gamma).
 
 It assumes that the $Y_i$ are Poisson distributed with the mean $μ_i$ assumed to follow a gamma distribution:
 
@@ -3458,12 +3752,214 @@ $$
 
 ## Fitting a negative binomial in R
 
-Negative binomial is not in the `glm()` function
+Negative binomial is not in the `glm()` function. We need the `MASS` package:
+
+Suitable for strongly over-dispersed zero-bounded integer data.
+
+```{r}
+#| eval: false
+#| echo: false
+#| message: false
+
+library(MASS)
+
+model <- glm.nb(y ~ x1 + x2, link = "log", data = dataframe)
+
+```
+
+
+## Negbin: Example
+
+:::: columns
+
+::: {.column}
+
+![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
+:::
+
+:::{.column}
+
+The example is an experiment measuring the effect of the parasitic tapeworm *Schistocephalus solidus* infection on the susceptibility of infection from a second parasite, the trematode *Diplostomum pseudospathaceum*
+
+The question of interest is:
+
+> How does Treatment/Infection status affect trematode counts?
+
+:::
+
+::::
+
 
 ## Exercise
 
-## Challenge
+```{r}
+#| label: ex-stickpois-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
 
+
+- Determine whether the poisson model is suitable for this dataset?
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| fig-width: 10
+#| message: false
+
+parasite <- read_csv("../data/parasite_exp.csv")
+
+stick_poisson <- glm(Diplo_intensity ~ Treatment, family = "poisson", data = parasite)
+
+```
+
+## Univariate distribution
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(parasite$Diplo_intensity, "pois")
+fn <- fitdist(parasite$Diplo_intensity, "norm")
+fnb<- fitdist(parasite$Diplo_intensity, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+```
+
+## Check Poisson model
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+summary(stick_poisson)
+
+```
+
+
+## Check zero-inflation
+
+The model is underfitting zeros (but not by much). 
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+check_zeroinflation(stick_poisson)
+
+```
+
+## Compare models
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Quasilikelihood
+stick_quasi <- glm(Diplo_intensity ~ Treatment, family = quasipoisson, data = parasite)
+
+```
+
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Neg bin
+stick_nb <- glm.nb(Diplo_intensity ~ Treatment, link = "log", data = parasite)
+
+```
+
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Zero-inflated model
+stick_zip <- zeroinfl(Diplo_intensity ~ Treatment| 
+                   Treatment,
+                dist = "poisson",
+                link = "logit",
+                data = parasite)
+
+
+```
+
+## Compare models
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+
+AIC(stick_poisson)
+AIC(stick_quasi)
+AIC(stick_nb)
+AIC(stick_zip)
+
+```
+
+## Comparison of model predictions
+
+```{r}
+
+colors <- c("Quasi" = "cyan", "NegBin" = "darkorange", "ZeroInfl" = "purple")
+
+means_quasi <- emmeans::emmeans(stick_quasi, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_nb <- emmeans::emmeans(stick_nb, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_zip <- emmeans::emmeans(stick_zip, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(parasite, aes(x=Treatment, y=Diplo_intensity)) + 
+  geom_jitter(width = .2,
+              alpha = .4)+
+ geom_pointrange(data = means_quasi,
+                 aes(x = Treatment,
+                     y = rate,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     colour = "Quasi"))+
+geom_pointrange(data = means_nb,
+                 aes(x = Treatment,
+                     y = response,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "NegBin"),
+                position = position_nudge(x= .2))+
+geom_pointrange(data = means_zip,
+                 aes(x = Treatment,
+                     y = emmean,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "ZeroInfl"),
+                position = position_nudge(x= -.2))+  
+  theme_classic(base_size = 14)+
+  scale_color_manual(values = colors)
+
+```
 
 # Simulate {background-color="#D9DBDB"}
 
