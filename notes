@@ -4,6 +4,14 @@ knitr::purl("slides/index.qmd")
 list.functions.in.file("index.R")
 
 
+car::vif(mod)
+
+Plot???
+
+sresid <- residuals(janka_gamma, type = "pearson")
+bptest(janka_gamma, ~ sresid)
+
+
 ## Outline (50mins per topic?)
 
 1.   A Very Short Introduction to R and Useful Packages: This session briefly overviews the R programming language and introduces participants to essential R packages for data analysis.
@@ -91,4 +99,4 @@ Warbler data - predict malaria risk by age and size - Dave R data - Bernoulli mo
 
 Beetles - shows weights and cbind. overdispersion? 
 
-Slugs: https://environmentalcomputing.net/statistics/glms/glm-2/ - needs zeroinflation.
+Revegetation: Slugs: https://environmentalcomputing.net/statistics/glms/glm-2/ - needs zeroinflation.

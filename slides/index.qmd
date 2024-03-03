@@ -26,6 +26,8 @@ library(DHARMa)
 library(lmtest)
 library(fitdistrplus)
 library(emmeans)
+library(gtsummary)
+library(sjPlot)
 
 ```
 
@@ -143,24 +145,13 @@ covid <- readr::read_csv(
 
 ## Recapping general linear models
 
-OLS
+- Also known at the Ordinary Least Squares (OLS) model
 
-## Limitations of general linear models
+- It aims to fit a regression line which minimises the squared differences between observed and predicted values
 
-**Q**. What are the assumptions of a general linear model?
+![](images/ols.png){fig-align="center" fig-alt="ordinary least squares" width=70%}
 
-::: {.incremental}
-
-* Assumes a linear relationship
-
-* Assumes normal distribution of the residuals
-
-* Assumes homogeneity of the residuals
-
-:::
-
-
-## Model assumptions
+## Equation of the line
 
 The equation of a linear model (lm) is given by:
 
@@ -183,11 +174,31 @@ where:
 - $\epsilon_i$ represents the residuals of the model
 :::
 
-##
+
+
+## Limitations of general linear models
+
+**Q**. What are the assumptions of a general linear model?
+
+::: {.incremental}
+
+* Assumes a linear relationship
+
+* Assumes normal distribution of the residuals
+
+* Assumes homogeneity of the residuals
+
+* Independence - assumes observations are independent of each other
+
+:::
+
+
+
+## Normal distribution of the residuals
 
 The linear regression line is the most likely line given your data if we assume each data point comes from a hypothetical bell curve centered on the regression line
 
-![](images/prob-reg.jpeg){fig-align="center" fig-alt="probability" width=70%}
+![](images/prob-reg.jpeg){fig-align="center" fig-alt="probability" width=60%}
 
 ## Normal distribution
 
@@ -238,7 +249,7 @@ ggplot(aes(x = x, y = density, color = mean)) +
 
 ## Normal distribution of the residuals
 
-When using our residuals to calculate standard error, confidence intervals and statistical signifcance these are assumed to be drawn from a normal distribution with mean zero and a constant variance. 
+When using our residuals to calculate standard error, confidence intervals and statistical significance these are assumed to be drawn from a normal distribution with mean zero and a constant variance. 
 
 :::{.fragment}
 
@@ -253,47 +264,299 @@ Another way to write the lm equation is:
 $$
 y_i \sim N(\mu = \beta_0 + \beta_1 X_i, \sigma^2)
 $$
+
 :::{.fragment}
+
 Which literally means that $y_i$ is drawn from a normal distribution with parameters $\mu$ (which depends on $x_i$) and $\sigma$(which has the same value for all measures of $Y$).
+
 :::
 
 
 ## Real data
 
-How often do these assumptions hold true? 
+How often do these assumptions really hold true? 
 
-good model
-Count data
-Challenger data? 
-
-## Assumption testing
-
-Residual plots? 
+A good fit: 
 
 ```{r}
-#| eval: false
-#| echo: true
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
 #| message: false
 
-car::vif(mod)
-lmtest::bptest(mod)
 
-sresid <- residuals(janka_gamma, type = "pearson")
-bptest(janka_gamma, ~ sresid)
+janka <- readr::read_csv("../data/janka.csv")
 
+model <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka)
 
-shapiro.test(residuals(model))
+plot(model, which=2)
+
+plot(model, which=3)
 
 ```
 
-# What are Generalised linear models? {background-color="#D9DBDB"}
+
+## Real data
+
+How often do these assumptions really hold true? 
+
+An ok fit: 
+
+```{r}
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
+#| message: false
+
+cuckoo <- read_csv("../data/cuckoo.csv")
+
+cuckoo_lm <- lm(Beg ~ Mass + Species + Mass:Species, data = cuckoo)
+
+plot(cuckoo_lm, which=2)
+
+plot(cuckoo_lm, which=3)
+```
+
+## Real data
+
+How often do these assumptions really hold true? 
+
+A poor fit: 
+
+```{r}
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
+#| message: false
+
+load(file = "../data/Mayflies.rda")
+
+Mayflies_lm <- lm(Occupancy ~ CCU, data = Mayflies)
+
+plot(Mayflies_lm, which=2)
+
+plot(Mayflies_lm, which=3)
+```
+
+
+## Assumption testing
+
+
+```{r}
+#| fig-height: 7
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+plot(model)
+
+```
 
 
 
-## Theoretical foundations
+
+## Residuals vs Fitted
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+
+plot(model, which=1)
+
+```
+
+:::
+
+:::{.column}
+
+- **Purpose:** To check for linearity and homoscedasticity.
+
+- **Interpretation:** Look for a random scatter of points around the horizontal line at y = 0. A funnel-shaped pattern suggests heteroscedasticity.
+
+:::
+
+::::
 
 
-## Probability distributions and exponential families
+## QQ-plot
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+
+plot(model, which=2)
+
+```
+
+:::
+
+:::{.column}
+
+- **Purpose:** To assess the normality of the residuals
+
+- **Interpretation:** Points should fall along the diagonal line. Deviation from the line indicates non-normality of residuals.
+
+:::
+
+::::
+
+## Scale-location
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+
+plot(model, which=3)
+
+```
+
+:::
+
+:::{.column}
+
+- **Purpose:** To check homoscedasticity and identify outliers
+
+- **Interpretation:** Uses **standardised** residuals. Constant spread indicates homoscedasticity
+
+:::
+
+::::
+
+## Residuals vs. Leverage
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+
+plot(model, which=4)
+
+```
+
+:::
+
+:::{.column}
+
+- **Purpose:** To identify influential data points(outliers)
+
+- **Interpretation:** Loking for points with high leverage that might affect the regression line. Investigate values > 0.5
+
+:::
+
+::::
+
+
+## Performance
+
+::::{.columns}
+
+:::{.column}
+
+The `performance` package from [easystats](https://easystats.github.io/easystats/) can produce (among other things) similar plots.
+
+:::
+
+:::{.column}
+
+```{r}
+#| fig-height: 7
+
+library(performance)
+check_model(model)
+
+```
+
+:::
+
+::::
+
+## Formal tests
+
+::::{.columns}
+
+:::{.column}
+
+- For linear models we can also run some formal tests on the residuals
+
+```{r}
+#| eval: true
+#| echo: true
+#| message: false
+
+# lmtest::bptest(model)
+
+performance::check_normality(model)
+
+# shapiro.test(residuals(model))
+
+performance::check_heteroscedasticity(model)
+
+```
+:::
+
+:::{.column}
+
+- This becomes more difficult with generalised models
+
+- Being able to interpret residual plots is important
+
+:::
+
+::::
+
+# Generalised Linear Models? {background-color="#D9DBDB"}
+
+## What are Generalised linear models?
+
+:::{.incremental}
+
+- The Generalized Linear Model (GLM) is an extension of the ordinary linear regression model that accommodates a broader range of response variable types and error distributions.
+
+- Key components: 
+
+- **Linear Predictor:** Combines predictor variables linearly.
+
+- **Link Function:** Links the mean of the response variable to the linear predictor.
+
+- **Error family:** Drawn from the **exponential family** it determines the shape of the response variable's distribution.
+
+:::
+
+
+## Linear Predictor
+
+Linear models:
+
+::: {.center-text}
+
+
+$y_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn +\epsilon_i$
+
+:::
+
+
+
+::: {.fragment}
+
+<br>
+
+Then generalised linear models...
+
+::: {.center-text}
+
+$\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \ldots + \beta_n x_{ni}$
+
+
+:::
+
+:::
 
 
 ## The link function
@@ -306,10 +569,6 @@ Let's start with linear models...
 
 $y_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn +\epsilon_i$
 
-$\epsilon_i = \mathcal{N}(0, \sigma^2)$
-
-
-
 :::
 
 ::: {.fragment}
@@ -320,31 +579,131 @@ Then generalised linear models...
 
 ::: {.center-text}
 
-$\mu_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn$
-$y_i \sim \mathcal{N}(\mu_i, \sigma^2)$
+$g(\mu_i) = \eta_i$
+
 
 :::
 
 :::
 
+:::{.fragment}
+
+Common link functions: identity, sqrt, log, logit
+
+:::
+
+
+## Error family
+
+Let's start with linear models...
+
+::: {.center-text}
+
+
+$y_i = \beta0 + \beta_1x1 + \beta_2x2 + ... +\beta_nxn +\epsilon_i$
+
+
+$\epsilon_i = \mathcal{N}(0, \sigma^2)$
+
+:::
+
+
+
+::: {.fragment}
+
+Then generalised linear models...
+
+::: {.center-text}
+
+$\mu_i = f(\eta_i)$
+
+$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
+
+:::
+
+:::
+
+:::{.fragment}
+
+**Examples:** Gaussian (normal), binomial, Poisson, gamma, etc.
+
+:::
+
+## Generalised Linear Model
+
+::::{.columns}
+
+:::{.column}
+
+Linear Predictor ($\eta$):
+
+$\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \ldots$
+
+Link Function ($g$):
+
+$g(\mu_i) = \eta_i$
+
+Probability Distribution:
+
+$\mu_i = f(\eta_i)$
+
+$\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
+
+:::
+
+:::{.column}
+
+- $\eta_i$ linear predictor for observation $i$
+
+- $g$ the link function relating the linear predictor to the expected value (mean) of the response variable
+
+- $\mu_i$ is the expected value of the response variable for observation $i$
+
+- $f$ the inverse of the link function, transforming the linear predictor back to the response variable's expected value
+
+- $\epsilon_i$ is the error term for observation $i$
+
+:::
+
+::::
+
+## Changing model structures
+
+There are a range of model structures available. 
+
+The choice of error family and link influence how well the model fits
+
+| Exponential Error Family      | Link Function       |
+|-------------------|---------------------|
+| Gaussian          | Identity, sqrt, log, inverse            |
+| Binomial          | Logit, probit, cloglog               |
+| Poisson           | Log, identity, sqrt                 |
+| Gamma             | Inverse, identity, log, sqrt             |
+| Negative Binomial | Log, identity, sqrt|
+
+
+# Questions? {background-color="#D9DBDB"}
 
 # A Linear Model Example {background-color="#D9DBDB"}
-
 
 ## Janka timber hardness
 
 This regression analysis uses data from the Australian forestry industry recording wood density and timber hardness from 36 different samples
 
+:::{.incremental}
+
 - Timber hardness is quantified on the "Janka" scale
 
 - The 'amount of force required to embed a 0.444" steel ball into the wood to half of its diameter'.
+
+:::
 
 ## Fitting the general linear model
 
 ```{r}
 #| eval: true
 #| echo: false
-#| fig-height: 8
+#| fig-height: 7
 #| message: false
 
 janka <- readr::read_csv("../data/janka.csv")
@@ -363,7 +722,6 @@ janka_ls <- lm(hardness ~ dens, data = janka)
 
 summary(janka_ls)
 
-
 janka |> 
   ggplot(aes( x = dens, y = hardness))+
   geom_point()+
@@ -373,8 +731,6 @@ janka |>
 
 
 ## Challenge
-
-Open `exercises/` for prompts.
 
 * Fit the Linear Model `lm(hardness ~ dens, data = janka)` to the janka data.
 
@@ -396,9 +752,7 @@ countdown::countdown(
 )
 ```
 
-. . . 
 
-See `exercise_solutions` for full solution.
 
 ## Model diagnostics
 
@@ -414,8 +768,6 @@ plot(janka_ls, which=2)
 plot(janka_ls, which=3)
 ```
 
-
-## Formal tests 
 
 ## Violations of assumptions
 
@@ -440,9 +792,8 @@ shapiro.test(residuals(janka_ls))
 
 ## Challenge
 
-Open `exercises/` for prompts.
 
-* What can we try to improve the fit of our `lm(hardness ~ dens, data = janka)`
+* What can we try to improve the fit of our `lm(hardness ~ dens, data = janka)` ?
 
 * Let's make suggestions then try them out
 
@@ -462,14 +813,41 @@ countdown::countdown(
 )
 ```
 
-. . . 
-
-See `exercise_solutions` for full solution.
 
 
 ## BoxCox
 
-## Transformations
+The R output for the `MASS::boxcox()` function plots a maximum likelihood curve (with a 95% confidence interval - drops down as dotted lines) for the best transformation for fitting the dependent variable to the model.
+
+::::{.columns}
+
+:::{.column}
+
+| lambda value | transformation |
+|--------------|----------------|
+| 0            | log(Y)         |
+| 0.5          | sqrt(Y)        |
+| 1            | Y              |
+| 2            | Y^1            |
+
+:::
+
+:::{.column}
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 7
+
+MASS::boxcox(janka_ls)
+
+```
+
+:::
+
+::::
+
+## Square root transformation
 
 ```{r}
 #| eval: true
@@ -504,8 +882,7 @@ ggplot(janka, aes(x = hardness, y = dens)) +
 ```
 
 
-
-## Residual plots
+## Log transformation
 
 ```{r}
 #| eval: true
@@ -522,6 +899,19 @@ plot(janka_log, which=3)
 
 ```
 
+## Model fit
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+ggplot(janka, aes(x = hardness, y = dens)) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "lm", formula = (y ~ log(x))) +  # regression line
+  labs(title = "Log Linear Regression",
+       x = "X", y = "Y")  # axis labels and title
+```
 
 ## Polynomials
 
@@ -540,20 +930,7 @@ plot(janka_poly, which=3)
 
 ```
 
-## Summary polynomial
-
-```{r}
-#| eval: true
-#| echo: true
-#| fig-height: 8
-#| message: false
-
-
-summary(janka_poly)
-
-```
-
-## Troublesome transformations
+## Polynomial fit
 
 ```{r}
 #| eval: true
@@ -562,11 +939,9 @@ summary(janka_poly)
 #| fig-height: 8
 #| message: false
 
-ggplot(janka, aes(x = hardness, y = dens)) +
-  geom_point() +  # scatter plot of original data points
-  geom_smooth(method = "lm", formula = (y ~ log(x))) +  # regression line
-  labs(title = "Log Linear Regression",
-       x = "X", y = "Y")  # axis labels and title
+summary(janka_poly)
+
+
 
 ggplot(janka, aes(x = hardness, y = dens)) +
   geom_point() +  # scatter plot of original data points
@@ -581,12 +956,22 @@ ggplot(janka, aes(x = hardness, y = dens)) +
 
 ## Weighted least squares
 
-weights = 1/sqrt(hardness): This argument specifies the weights to be used in the fitting process. In this case, the weights are set to be inversely proportional to the square root of hardness.
+```{r}
+#| eval: true
+#| echo: true
+#| message: false
 
-1/sqrt(hardness): This means that observations with higher values of hardness will have lower weights, and observations with lower values of hardness will have higher weights. This could be used to give more importance to certain observations in the model fitting process.
-data = janka: This specifies the data frame (janka) from which the variables (sqrt(hardness) and dens) are to be taken.
+janka_wls <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka)
 
-Putting it all together, the code janka_wls <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka) fits a linear model where the response variable is the square root of hardness, the predictor variable is dens, and weights are inversely proportional to the square root of hardness. This is often referred to as a weighted least squares (WLS) regression model, where observations are weighted differently based on certain criteria (in this case, the square root of hardness).
+```
+
+- Weights are specified as $\frac{1}{\sqrt{\text{hardness}}}$, indicating that observations with higher hardness values will have lower weights, and vice versa.
+
+- This weighting scheme can assign more importance to certain observations in the model fitting process.
+
+- This approach is known as weighted least squares (WLS) regression, where observations are weighted differently based on certain criteria, such as the square root of hardness.
+
+## Weighted least squares
 
 ```{r}
 #| eval: true
@@ -603,12 +988,13 @@ plot(janka_wls, which=3)
 
 ```
 
-## 
+## Model fit
 
 ```{r}
 #| eval: true
-#| echo: true
+#| echo: false
 #| fig-height: 8
+#| layout-ncol: 2
 #| message: false
 
 prediction_data <- data.frame(dens = sort(unique(janka$dens)))
@@ -624,13 +1010,64 @@ ggplot(janka) +
     geom_line(data = prediction_data, aes(x = dens, y = wls_pred), color = "blue")+
   geom_point(aes(x = dens, y = sqrt(hardness)))
 
+summary(janka_wls)
+
 ```
 
 ## Troublesome transformations
 
-See screenshots
+:::{.incremental}
 
-# A Generalized linear model approach
+- Changes interpretability
+
+- Can introduce NEW violations of assumptions
+
+- Error and Mean change together
+
+- We don't understand the true structure of our data
+
+:::
+
+## A Generalized linear model approach
+
+
+* Fit a `glm(gaussian(link = "identity"))` to the data
+
+* Check that the model is identical to the `lm()`
+
+
+```{r}
+#| label: ex-glm-timer
+countdown::countdown(
+  minutes = 5,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+```{r}
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+janka_glm <- glm(hardness ~ dens, data = janka, family = gaussian(link = "identity"))
+
+summary(janka_glm)
+
+```
+
+## A Generalized linear model approach
+
+We previously identified that the **square root** of the dependent variable might have been a better fit with our linear model:
 
 ```{r}
 #| eval: true
@@ -648,8 +1085,12 @@ summary(janka_glm)
 
 ## Plot model
 
+::::{.columns}
+
+:::{.column}
+
 ```{r}
-#| eval: true
+#| eval: false
 #| echo: true
 #| fig-height: 8
 #| message: false
@@ -664,6 +1105,29 @@ ggplot(janka, aes(x = dens, y = hardness)) +
 
 ```
 
+:::
+
+:::{.column}
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+
+ggplot(janka, aes(x = dens, y = hardness)) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "glm", method.args = list(gaussian(link = "sqrt"))) +  # regression line
+  labs(title = "Linear Regression with ggplot2",
+       x = "X", y = "Y")  # axis labels and title
+
+
+```
+
+:::
+
+::::
 
 ## Residuals
 
@@ -682,14 +1146,17 @@ plot(janka_glm, which=3)
 
 ```
 
-## Gamma distribution
 
-## Univariate analysis
+## Choosing an Error Family
+
+::::{.columns}
+
+:::{.column}
 
 ```{r}
 #| eval: true
-#| echo: false
-#| fig-height: 8
+#| echo: true
+#| fig-height: 7
 #| message: false
 
 library(fitdistrplus)
@@ -698,14 +1165,34 @@ descdist(janka$hardness, boot = 500)
 
 ```
 
+:::
 
-##
+:::{.column}
+
+- A Cullen and Frey plot (skewness-kurtosis)
+
+- A graphical view of the distribution of the dependent variable
+
+- Reference lines represent expected skew and kurtosis for different distributions
+
+- Beta family sits outside of GLM exponential families
+
+:::
+
+::::
+
+## Choosing an Error family
+
+::::{.columns}
+
+:::{.column}
 
 ```{r}
-#| eval: true
-#| echo: false
+#| eval: false
+#| echo: true
 #| fig-height: 8
 #| message: false
+#| warning: false
 
 library(fitdistrplus)
 
@@ -717,19 +1204,117 @@ denscomp(list(fn, fg), legendtext = plot.legend)
 qqcomp(list(fn, fg), legendtext = plot.legend)
 ```
 
-## 
+:::
+
+:::{.column}
 
 ```{r}
 #| eval: true
 #| echo: false
-#| fig-height: 8
+#| fig-height: 7
+#| message: false
+#| warning: false
+
+library(fitdistrplus)
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fg <- fitdist(sqrt(janka$hardness), "gamma")
+fn <- fitdist(sqrt(janka$hardness), "norm")
+plot.legend <- c("normal", "gamma")
+denscomp(list(fn, fg), legendtext = plot.legend)
+qqcomp(list(fn, fg), legendtext = plot.legend)
+```
+
+:::
+
+::::
+
+## Choosing based on AIC
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| eval: true
+#| echo: true
 #| message: false
 
 summary(fg)
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| eval: true
+#| echo: true
+#| message: false
 
 summary(fn)
+```
+
+:::
+
+::::
+
+
+
+
+## Gamma
+
+:::: columns
+
+::: {.column}
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+
+# Define a range of shape values
+shape_values <- c(1, 2, 5, 10)
+scale_value <- 2 # Keep scale fixed for simplicity
+
+# Generate the Gamma distribution data
+gamma_data <- map_df(shape_values, ~tibble(
+  shape = .x,
+  x = seq(0, 20, length.out = 100),
+  density = dgamma(seq(0, 20, length.out = 100), shape = .x, scale = scale_value)
+)) %>%
+  mutate(shape = factor(shape, levels = shape_values)) # For ordered plotting
+
+# Plot
+ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
+  geom_line() +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Gamma Distribution with Different Shape Parameters",
+       x = "Value",
+       y = "Density",
+       color = "Shape Parameter") +
+  theme_minimal(base_size = 14)
 
 ```
+
+$f(x;\alpha,\beta) = \frac{\beta^\alpha x^{\alpha - 1} e^{-\beta x}}{\Gamma(\alpha)}$
+
+::: 
+
+::: {.column}
+
+- Shape (α): Determines the shape or curve of the distribution. Higher values of α result in distributions that are more peaked and skewed to the left.
+
+- Rate (β): Influences the scale or spread of the distribution. Smaller values of β result in distributions that are more spread out, while larger values of β lead to distributions that are more concentrated around the mean.
+
+- Useful for modelling **positively skewed continuous  non-negative data**
+
+:::
+
+
+::::
+
 
 ## Gamma GLM
 
@@ -748,8 +1333,12 @@ summary(janka_gamma)
 
 ## Plot model
 
+::::{.columns}
+
+:::{.column}
+
 ```{r}
-#| eval: true
+#| eval: false
 #| echo: true
 #| fig-height: 8
 #| message: false
@@ -764,32 +1353,118 @@ ggplot(janka, aes(x = dens, y = hardness)) +
 
 ```
 
-## Exercise
+:::
 
-## Challenge
-
-## Compare
+:::{.column}
 
 ```{r}
 #| eval: true
-#| echo: true
+#| echo: false
+#| fig-height: 7
 #| message: false
 
 
+ggplot(janka, aes(x = dens, y = hardness)) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "glm", method.args = list(Gamma(link = "sqrt"))) +  # regression line
+  labs(title = "Linear Regression with ggplot2",
+       x = "X", y = "Y")  # axis labels and title
 
-library(MuMIn)
-
-#r.squaredLR()
-
-# r squared
 
 ```
+
+:::
+
+::::
+
+## Exercise
+
+* Fit the Gamma distribution linear model to the data.
+
+* Evaluate the model fit against other glm fits.
+
+```{r}
+#| label: ex-gamma-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+
+
+# Questions? {background-color="#D9DBDB"}
 
 
 # Likelihood {background-color="#D9DBDB"}
 
 
 ## Log-Likelihood
+
+::::{.columns}
+
+:::{.column}
+
+- Likelihood measures the probability of observing the given data under a specific statistical model, as a function of the model's parameters.
+
+- It represents how well the model explains the observed data.
+
+- The log likelihood function in maximum likelihood estimations is usually computationally simpler as it is additive.
+
+:::
+
+:::{.column}
+
+![](images/log-likelihood.png){fig-align="center" fig-alt="The log-likelihood (l) maximum is the same as the likelihood (L) maximum." width=100%}
+
+:::
+
+::::
+
+## Log-Likelihood
+
+Likelihood Function:
+
+$L(\theta | y) = f(y_1 | \theta) \times f(y_2 | \theta) \times \ldots \times f(y_n | \theta)$
+
+:::{.fragment}
+
+Log-Likelihood Function:
+
+$\ell(\theta | y) = \log(f(y_1 | \theta)) + \log(f(y_2 | \theta)) + \ldots + \log(f(y_n | \theta))$
+
+:::
+
+:::{.fragment}
+
+Although log-likelihood functions are mathematically easier than their multiplicative counterparts, they can be challenging to calculate by hand. They are usually calculated with software.
+
+:::
+
+## Maximum Likelihood Estimation
+
+For a specified error family distribution and link function, the glm finds parameter values that have the highest likelihood score.
+
+:::{.incremental}
+
+- Which estimates have the are most probable for producing the observed data
+
+- This is an iterative process, without a single defined equation
+
+- For gaussian and identity link it will produce the same outcome as OLS.
+
+:::
+
+Log-Likelihood Function:
+$$\ell(\theta | \mathbf{y}) = \sum_{i=1}^{n} \log(f(y_i | \theta))$$
 
 
 ## Maximum Likelihood
@@ -804,7 +1479,7 @@ library(MuMIn)
 # Simulated data
 set.seed(42)
 
-log_likelihood_visual <- function(mean = 6, sd = 2){
+log_likelihood_visual <- function(mean = 6, sd = 1){
 
 data <- rnorm(100, mean = mean, sd = sd)
 
@@ -832,22 +1507,433 @@ ggplot(grid, aes(x = mu, y = sigma, z = log_likelihood)) +
        fill = "Log-Likelihood") +
   theme_minimal()
 }
+
+log_likelihood_visual()
 ```
 
+## Exercise
+
+
+* Use the log-likelihood function with varying values of the mean and sd
+
+```{r}
+#| label: ex-log-timer
+countdown::countdown(
+  minutes = 5,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
 
 ## Deviance
 
+- The deviance is a key concept in generalized linear models. 
+
+- It measures the deviance of the fitted generalized linear model with respect to a perfect/**saturated** model for the sample.
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 6
+#| message: false
+
+
+
+# Simulate some data
+set.seed(123)
+n <- 100  # Sample size
+x <- rnorm(n)  # Predictor variable
+y <- 2 + 3*x + rnorm(n)  # Continuous response variable (linear relationship)
+
+# Fit the null model (intercept only)
+null_model <- lm(y ~ 1)
+
+# Fit the saturated model (fully saturated model)
+saturated_model <- lm(y ~ x)
+
+# Fit the fitted model (linear predictor with x)
+fitted_model <- lm(y ~ x)
+
+# Create a dataframe to store observed points
+observed_data <- data.frame(x = x, y = y)
+
+# Generate fitted lines
+fitted_lines <- data.frame(x = sort(x))
+fitted_lines$Null <- predict(null_model, newdata = fitted_lines)
+fitted_lines$Fitted <- predict(fitted_model, newdata = fitted_lines)
+
+# Plot observed points and fitted lines
+ggplot() +
+    geom_point(data = observed_data, aes(x = x, y = y), color = "black") +
+    geom_line(data = fitted_lines, aes(x = x, y = Null, color = "Null")) +
+    geom_line(data = observed_data, aes(x = x, y = y, color = "Saturated")) +
+    geom_line(data = fitted_lines, aes(x = x, y = Fitted, color = "Fitted")) +
+    scale_color_manual(values = c("Null" = "red", "Saturated" = "blue", "Fitted" = "green"),
+                       name = "Model") +
+    labs(
+        title = "Fitted Lines vs Observed Points",
+        x = "x",
+        y = "y"
+    ) +
+    theme_minimal(base_size = 14)
+
+
+```
+
+
+
+
 ## Pseudo R-squared
+
+::::{.columns}
+
+:::{.column}
+
+![](images/deviance.png){fig-align="center" fig-alt="" width=100%}
+
+:::
+
+:::{.column}
+
+Formula: 
+
+$GLM~R^2 = 1 - \frac{D}{D_0}$
+
+$linear\_model~R^2= 1 - \frac{SSE}{SST}$
+
+
+- $D$ is the deviance of the fitted model.
+
+- $D_0$ is the deviance of the null model (linear model with only an intercept).
+
+The GLM $R^2$ **is not** the percentage of variance explained by the model, but rather a ratio indicating how close the fit is to being perfect.
+
+:::
+
+::::
+
+## Pseudo R-squared in R
+
+- We can fit the deviance-based pseudo $R^2$ with the `MuMIn` package
+
+- `r.squaredLR()` is a function used to compute the likelihood ratio (LR) based R-squared for a given model
+
+```{r}
+#| eval: true
+#| echo: true
+#| message: false
+
+
+
+library(MuMIn)
+
+r.squaredLR(janka_gamma)
+
+
+```
 
 ## AIC
 
+:::{.incremental}
+
+- The Akaike Information Criterion (AIC)  balances the trade-off between model fit and complexity by penalizing models with more parameters.
+
+- It aims to find the model that best explains the data while avoiding overfitting.
+
+- AIC is calculated as follows: $\text{AIC} = 2k - 2\ln(\hat{L})$, where:
+log-likelihood is the maximized value of the likelihood function for the fitted model.
+$k$ is the number of parameters in the model.
+
+- In general a difference in AIC of <2 suggests equivalent goodness-of-fit
+
+:::
+
+## AIC
+
+::::{.columns}
+
+:::{.column}
+
+**AIC can:**
+
+- Compare non-nested models fitted to the same dataset and response variable
+
+- Compare across different GLM families and link functions
+
+:::
+
+:::{.column}
+
+**AIC cannot:**
+
+- Compare models where the response variable is transformed
+
+- Compare models where there are differences in the dataset
+
+:::
+
+::::
+
+## Exercise
+
+* Revisit the janka models
+
+* Compare R-squared fits and AIC values
+
+```{r}
+#| label: ex-fits-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+
+
 ## Likelihood ratio Test
+
+The likelihood ratio test (LRT) “unifies” frequentist statistical tests. Brand-name tests like t-test, F-test, chi-squared-test, are specific cases (or even approximations) of the LRT.
+
+- The likelihood ratio test (LRT) begins with a comparison of the likelihood scores of the two models:
+
+$\text{LR} = -2(\ln L_1 - \ln L_2)$
+
+:::{.fragment}
+
+Where:
+
+- $\ln L_1$ and $\ln L_2$ are the log-likelihoods of the two models being compared.
+
+:::
+
+## Likelihood ratio test
+
+- This LRT statistic approximately follows a chi-square distribution. 
+
+- To determine if the difference in likelihood scores among the two models is statistically significant, we next must consider the degrees of freedom. 
+
+- In the LRT, degrees of freedom is equal to the number of additional parameters in the more complex model.
+
+```{r}
+#| echo: false
+#| eval: true
+
+fitted_model <- glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt"))
+null_model <- glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt"))
+
+```
+
+```{r}
+
+#| echo: true
+#| eval: true
+
+fitted_likelihood <- logLik(glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt")))
+
+null_likelihood <- logLik(glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt")))
+
+LR <- -2*(null_likelihood[1]-fitted_likelihood[1])
+
+LR
+
+```
+
+## Likelihood ratio test
+
+:::{.incremental}
+
+- The likelihood ratio test is typically calculated as twice the difference in deviance between the two models.
+
+- Scaling by -2 ensures the test statistic follows a chi-square distribution under certain conditions
+
+- We can calculate the likelihood ratio test statistic, compare it to the chi-square distribution with the appropriate degrees of freedom, and determine whether the improvement in fit between the two models is statistically significant.
+
+:::
+
+```{r}
+
+lrtest(null_model, fitted_model)
+
+```
+
+## F distribution
+
+What if the variance is unknown e.g. Gaussian and Gamma distributions?
+
+:::{.incremental}
+
+- Then the null model estimates one parameter while the alternative model estimates two, so the difference in df is still 1. 
+
+- In this case, we know this more familiarly as the ANOVA or F-test, which in this example is equivalent to the t-test on the intercept.
+
+:::
+
+```{r}
+summary(fitted_model)
+
+anova(null_model, fitted_model, test = "F")
+
+# drop1(fitted_model, test = "F")
+
+```
 
 ## Challenge?
 
+
+* Using the `fruitfly.csv` dataset
+
+* Build a model to investigate the effect of sleep, mating status and body size on longevity
+
+* Check model fits and report findings
+
+```{r}
+#| label: ex-fly-glm-timer
+countdown::countdown(
+  minutes = 30,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+
+## Confidence intervals
+
+```{r}
+#| echo: false
+#| eval: true
+
+fruitfly <- read_csv("../data/fruitfly.csv")
+
+fly_glm <- glm(longevity ~ type + thorax + sleep, family = gaussian(link = "sqrt"), data = fruitfly)
+
+```
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+# Assuming 'model' is your fitted GLM model
+
+# Extract coefficients and confidence intervals
+coef_ci <- confint(fly_glm)
+
+# Extract estimates
+estimates <- coef(fly_glm)
+
+# Combine estimates with confidence intervals
+estimates_df <- data.frame(
+  estimates = estimates,
+  lower_ci = coef_ci[,1],
+  upper_ci = coef_ci[,2]
+)
+
+# Display dataframe
+estimates_df
+
+```
+
+## Confidence intervals
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(fly_glm, conf.int = T)
+
+```
+
+## Exponentiate terms
+
+Terms are currently not on the same scale as the response variable:
+
+- Exponentiated coefficients allow for direct comparison of the effects of predictors on the response variable.
+
+- Be clear and careful about which you are using
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+# Extract coefficients and confidence intervals on response scale
+coef_ci <- exp(confint(fly_glm))
+
+# Extract estimates
+estimates <- exp(coef(fly_glm))
+
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(fly_glm, conf.int = T, exponentiate = T)
+
+```
+
+## Tables
+
+- There are multiple packages available that provide ways to present publication ready model summaries
+
+```{r}
+#| echo: true
+#| eval: false
+#| message: false
+
+library(gtsummary)
+
+tbl_summary(fly_glm)
+
+library(sjPlot)
+
+tab_model(fly_glm)
+
+```
+
+##
+
+```{r}
+#| echo: false
+#| eval: true
+#| message: false
+
+library(sjPlot)
+
+tab_model(fly_glm)
+
+```
+
 # GLMs for binary data {background-color="#D9DBDB"}
 
+## GLMS for binary data 
+
 Common response variable in ecological datasets is the binary variable: we observe a phenomenon X or its “absence”
+
+:::{.incremental}
 
 * Presence/Absence of a species
 
@@ -856,6 +1942,8 @@ Common response variable in ecological datasets is the binary variable: we obser
 * Success/Failure to observe behaviour
 
 * Survival/Death of organisms
+
+:::
 
 Wish to determine if $P/A∼ Variable$
 
@@ -874,31 +1962,40 @@ load(file = "../data/Mayflies.rda")
 
 ```
 
+
+:::{.incremental}
+
 - Investigating mayfly abundance in relation to pollution gradient measured in Cumulative Criterion Units (CCU)
 
 - Mayflies serve as indicators of stream health due to sensitivity to metal pollution
 
 - Higher CCU values indicate increased metal pollution, potentially impacting mayfly presence or absence in the stream
 
+:::
+
 ## Example
 
-If I just fit a regular linear model to this data:
+Fitting a linear regression vs a logit-link regression:
 
 ```{r}
 #| eval: true
 #| echo: true
-#| fig-height: 8
+#| fig-height: 7
 #| layout-ncol: 2
 #| message: false
 #| warning: false
 
 ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm")+
+    labs(title = "Linear Regression",
+       x = "CCU", y = "Occupancy") +
+  theme_classic(base_size = 14)
 
 ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
-  geom_smooth(method = "glm", method.args = list(binomial(link = "logit"))) +  # regression line
+  geom_smooth(method = "glm", method.args = list(binomial(link = "logit"))) +
   labs(title = "Logit-link Binomial Regression",
-       x = "X", y = "Y")  # axis labels and title
+       x = "CCU", y = "Occupancy") +
+  theme_classic(base_size = 14)
 
 ```
 
@@ -910,7 +2007,11 @@ ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
 
 :::{.column}
 
-The Bernoulli distribution models the probability of success or failure in a single trial of a binary experiment, where success occurs with probability $p$ and failure with probability ${1-p}$1
+The Bernoulli distribution models the probability of success or failure in a single trial of a binary experiment:
+
+* where success occurs with probability $p$ 
+
+* and failure with probability ${1-p}$
 
 :::
 
@@ -939,7 +2040,7 @@ ggplot(df, aes(x = Outcome, y = Probability, group = Outcome)) +
   labs(title = "Probability Distribution of a Bernoulli Random Variable",
        x = "Outcome",
        y = "Probability") +
-  theme_minimal()
+  theme_minimal(base_size = 14)
 
 ```
 
@@ -982,30 +2083,34 @@ For binary data, the link function is called the logit:
 
 $$ logit(p) = \log \frac{p}{1 - p} $$
 
-where $p$ represents the expected values (probability that $Y = 1$).
 
-To obtain the odds $(p / (1 - p))$, we log-transform them.
+
+The log of the odds $(p / (1 - p))$
 
 
 ## The logit link
 
 $$ logit(p) = \log \frac{p}{1 - p} $$
 
-Get the odds $(μ / (1 - μ))$ and log-transform them.
+:::{.incremental}
 
-The odds put our expected values on a 0 to +Inf scale.
+- The odds put our expected values on a 0 to +Inf scale.
 
-The log transformation puts our expected values on a -Inf to +Inf scale.
+- The log transformation puts our expected values on a -Inf to +Inf scale.
 
-Now, the expected values can be linearly related to the linear predictor.
+- Now, the expected values can be linearly related to the linear predictor.
 
+:::
 
 ## Probability, odds, logit-odds
+
+::::{.columns}
+
+:::{.column width="60%"}
 
 ```{r}
 #| eval: true
 #| echo: false
-#| layout-ncol: 3
 #| message: false
 #| warning: false
 
@@ -1044,6 +2149,20 @@ plot(independent_variable, log_odds, type = "l", col = "green", xlab = "Independ
 
 ```
 
+:::
+
+:::{.column width="40%"}
+
+- The odds put our expected values on a 0 to +Inf scale.
+
+- The log transformation puts our expected values on a -Inf to +Inf scale.
+
+- Now, the expected values can be linearly related to the linear predictor.
+
+:::
+
+::::
+
 
 ## Example
 
@@ -1063,24 +2182,24 @@ Each coefficient corresponds to a predictor variable, indicating the change in t
 
 ## Interpret the model
 
+:::{.incremental}
+
 - Interpretation of coefficients involves exponentiating them to obtain odds ratios.
 
 - An odds ratio greater than 1 implies higher odds of the event occurring with an increase in the predictor.
 
 - An odds ratio less than 1 implies lower odds of the event occurring with an increase in the predictor.
 
+:::
+
 ## Intepret the model
 
 | Probability | Odds                              | Log Odds | Verbiage               |
 |-------------|-----------------------------------|-----------------|------------------------|
 | $p=.95$     | $\frac{95}{5} = \frac{19}{1} = 19$ |      2.94           | 19 to 1 odds for      |
-|-------------|-----------------------------------|-----------------|------------------------|
 | $p=.75$     | $\frac{75}{25} = \frac{3}{1} = 3$  |       1.09          | 3 to 1 odds for       |
-|-------------|-----------------------------------|-----------------|------------------------|
 | $p=.50$     | $\frac{50}{50} = \frac{1}{1} = 1$  |        0         | 1 to 1 odds           |
-|-------------|-----------------------------------|-----------------|------------------------|
 | $p=.25$     | $\frac{25}{75} = \frac{1}{3} = 0.33$ |    -1.11            | 3 to 1 odds against   |
-|-------------|-----------------------------------|-----------------|------------------------|
 | $p=.05$     | $\frac{95}{5}  = \frac{1}{19} = 0.0526$ |   -2.94          | 19 to 1 odds against  |
 
 ## Logit odds
@@ -1090,41 +2209,110 @@ When we use a binomial model, we produce the 'log-odds', this produces a fully u
 
 $$\log\left(\frac{p}{1-p}\right)	=	\beta_{0}+\beta_{1}x_{1}+\beta_{2}x_{2}$$
 
+:::{.fragment}
+
 $$\frac{p}{1-p}	=	e^{\beta_{0}}e^{\beta_{1}x_{1}}e^{\beta_{2}x_{2}}$$
 
-##
+:::
+
+:::{.fragment}
 
 - We can interpret $\beta_{1}$ and $\beta_{2}$ as the increase in the log odds for every unit increase in $x_{1}$ and $x_{2}$. 
 
 - We could alternatively interpret $\beta_{1}$ and $\beta_{2}$ using the notion that a one unit change in $x_{1}$ as a percent change of $e^{\beta_{1}}$ in the odds. 
 
+:::
 
 ##
 
+:::::{.columns}
+
+::::{.column}
+
 For the intercept: 
+
 - The estimate as log odds is 5.102.
+
 - Therefore the odds are 164
+
 - Over 99% probability of observing mayfly when CCU = 0
 
-::: {.fragment}
+
+::::
+
+::::{.column}
+
+```{r}
+summary(mayfly_glm)
+```
+
+::::
+
+:::::
+
+
+##
+
+:::::{.columns}
+
+::::{.column}
+
 
 For the predictor variable `CCU`:
+
 - The estimate is -3.051.
-- This means that for every one unit increase in `CCU`, the log odds of the response variable decreases by 3.051, holding all other predictors constant.
 
-:::
+- This means that for every one unit increase in `CCU`, the log odds of the response variable **decreases by 3.051**, holding all other predictors constant.
 
-:::{.fragment}
+
+::::
+
+::::{.column}
+
+```{r}
+summary(mayfly_glm)
+```
+
+::::
+
+:::::
+
+##
+
+:::::{.columns}
+
+::::{.column}
+
 Now, let's interpret the coefficient for `CCU` using the odds ratio interpretation:
+
+:::{.incremental}
+
 - The odds ratio associated with `CCU` is calculated as $e^{\beta_{\text{CCU}}} = e^{-3.051}$.
+
 - Therefore, $e^{\beta_{\text{CCU}}} \approx 0.048$.
+
 - This means that for every one unit increase in `CCU`, the odds of the response variable decrease by a multiple of 0.048
+
 :::
+
+::::
+
+::::{.column}
+
+```{r}
+#| eval: true
+#| echo: true
+
+broom::tidy(mayfly_glm, exponentiate = T)
+```
+
+::::
+
+:::::
+
 
 ## Challenge
 
-
-Open `exercises/` for prompts.
 
 * Work with the odds and probability calculators
 
@@ -1146,33 +2334,33 @@ countdown::countdown(
 )
 ```
 
-. . . 
-
-See `exercise_solutions` for full solution.
 
 ## Model fit
 
 For a simple Bernoulli/Binary GLM there are only a few checks that apply:
 
-## Model fit
-
 ```{r}
 #| eval: true
-#| echo: false
-#| fig-height: 8
+#| echo: true
+#| fig-height: 6
 #| layout-ncol: 3
 #| message: false
 
+# Calculate and plot "deviance" residuals
 dresid <- resid(mayfly_glm, type = "deviance")
 hist(dresid)
 
+# Plot leverage
 plot(mayfly_glm, which = 2)
 
+# Plot Cook's distance
 plot(mayfly_glm, which = 4)
 
 ```
 
 ## Model fit
+
+Residuals in binary glms will never be normally distributed - so a "residuals vs fitted plot" provides little insight.
 
 ```{r}
 #| eval: true
@@ -1187,6 +2375,8 @@ plot(mayfly_glm, which = 1)
 
 ## DHARMa fit
 
+- [DHARMa](https://theoreticalecology.wordpress.com/2016/08/28/dharma-an-r-package-for-residual-diagnostics-of-glmms/) works by **simulating residuals** from the fitted model, comparing them with observed residuals, and providing diagnostic plots to assess model adequacy and identify potential issues like heteroscedasticity or influential data points.
+
 ```{r}
 library(DHARMa)
 plot(simulateResiduals(mayfly_glm))
@@ -1196,10 +2386,29 @@ plot(simulateResiduals(mayfly_glm))
 
 ## Prediction
 
+
+- `predict()` function for GLMs computes predicted values based on the fitted model.
+
+- For existing data, it predicts values for each observation in the original dataset.
+
+- For new data, it predicts values for a specified new dataset, allowing for predictions on unseen data.
+
+
 ```{r}
+#| eval: false
+#| echo: true
+#| message: false
 
 # Predictions for existing data
-# predict(mayfly_glm, type = "response")
+predict(mayfly_glm, type = "response")
+
+```
+
+
+```{r}
+#| eval: false
+#| echo: true
+#| message: false
 
 # Predictions for new data
 new_CCU<- data.frame(CCU = c(0,1,2,3,4,5))
@@ -1208,6 +2417,11 @@ predict(mayfly_glm, newdata = new_CCU, type = "response")
 ```
 
 ## Emmeans
+
+The `emmeans` package in R computes estimated marginal means (EMMs) it can also provides post-hoc comparisons and contrasts for fitted models.
+
+
+- This specific function call below computes EMMs for the predictor variable CCU at specific values (0 to 5) and provides them on the response scale.
 
 ```{r}
 
@@ -1221,7 +2435,17 @@ emmeans::emmeans(mayfly_glm,
 
 ## Prediction plots with emmeans
 
+We can use `emmeans` package to compute estimated marginal means (EMMs) from a fitted GLM, convert them into a tibble format for visualization with ggplot2, overlay the means with uncertainty ribbons and add them on a scatter plot of the original data.
+
+::::{.columns}
+
+:::{.column width="60%"}
+
 ```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
 means <- emmeans::emmeans(mayfly_glm, 
                  specs = ~ CCU, 
                  at=list(CCU=c(0:5)), 
@@ -1239,16 +2463,71 @@ ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
             aes(x = CCU,
                 y = prob)) +  # regression line
   labs(title = "Logit-link Binomial Regression",
-       x = "X", y = "Y")  # axis labels and title
+       x = "CCU", y = "Occupancy")+
+  theme_classic(base_size = 14)
 
 ```
 
+:::
+
+:::{.column width="40%"}
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+means <- emmeans::emmeans(mayfly_glm, 
+                 specs = ~ CCU, 
+                 at=list(CCU=c(0:5)), 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = CCU,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = CCU,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "CCU", y = "Occupancy")+
+  theme_classic(base_size = 14)
+
+```
+
+:::
+
+::::
 
 ## Exercise
 
-## Challenge
 
-Open `exercises/` for prompts.
+* Can you recreate the binomial glm for mayfly~ccu data?
+
+```{r}
+#| label: ex-ccu-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+
+
+## Challenge
 
 * Using the malaria dataset fit a binomial glm to look at the predictors of malaria in the Seychelles warbler
 
@@ -1273,10 +2552,6 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
-
-. . . 
-
-See `exercise_solutions` for full solution.
 
 
 # GLMs for Binomial data {background-color="#D9DBDB"}
@@ -1352,56 +2627,54 @@ $y_i = Binomial(n,p)$
 
 ::::
 
-##
-
-$P(X = s) = C(n, s) \cdot p^s \cdot (1 - p)^{n - s}$
-
-Where:
-
-- $n$ is the total number of trials of an event.
-- $s$ corresponds to the number of times an event should occur.
-- $p$ is the probability that the event will occur.
-- $(1 - p)$ is the probability that the event will not occur.
-- $C$ term represents combinations, calculated as $C(n, s) = \frac{n!}{s!(n - s)!}$, representing the number of ways to choose $s$ successes out of $n$ trials.
-
-
-## Example
-
-TEXT
+## Binomial: Example
 
 :::: columns
 
 ::: {.column}
 
-```{r}
-#| eval: true
-#| echo: true
-#| fig-height: 8
-#| message: false
-
-# According to the situation:
-# n = 5,
-# s = 5,
-# p = 0.95,
-# (1 — p) = 0.05
-
-p = 1 * (0.95)^(5) * (0.05)^(0)
-
-p
-
-```
+![](images/Tribolium castaneum.jpg){fig-align="center" fig-alt="Tribolium" width=50%}
 :::
 
-::: {.column}
+:::{.column}
 
-```{r}
+This small dataset is from an experiment looking at mortality in batches of flour exposed to different doses of pesticides.
 
-dbinom(5, 5, 0.95)
+The question of interest is: 
 
-```
+> How does pesticide dose affect mortality in the flour beetle *Tribolium castaneum*
+
 :::
 
-## Case study
+::::
+
+## The data
+
+```{r}
+#|echo: true
+#|message: false
+
+beetles <- read_csv("../data/beetles.csv")
+beetles
+```
+
+## Preparing the data
+
+As well as the numbers killed, we need the numbers that remain alive
+
+```{r}
+#|echo: true
+#|message: false
+
+beetles <- beetles |> 
+  rename("dead" = Number_killed,
+         "trials" = Number_tested) |> 
+  mutate("alive" = trials-dead)
+
+beetles
+
+```
+
 
 ## Binomial VS Bernoulli Keypoints!
 
@@ -1409,11 +2682,120 @@ Bernoulli deals with the outcome of the single trial of the event, whereas Binom
 
 Bernoulli is used when the outcome of an event is required for only one time, whereas the Binomial is used when the outcome of an event is required multiple times.
 
-## Exercise
+## Binomial glm
+
+The GLM of the binomial counts will analyse the number of *each* batch of beetles killed, while taking into account the size of each group
+
+```{r}
+#|echo: true
+#|message: false
+
+#cbind() creates a matrix of successes and failures for each batch
+
+beetle_glm <- glm(cbind(dead, alive) ~ Dose, family = binomial(link = "logit"), data = beetles)
+
+summary(beetle_glm)
+
+```
 
 ## Weights
 
-## Predictions/write-up
+An alternative method is to analyse the proportion of beetles killed and including the number of trials with the `weight` argument
+
+```{r}
+#|echo: true
+#|message: false
+
+
+beetle_glm_weights <- glm(Mortality_rate ~ Dose, weights = trials, family = binomial(link = "logit"), data = beetles)
+
+summary(beetle_glm_weights)
+
+```
+
+
+## 
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(beetle_glm, conf.int = T)
+
+```
+
+
+## Table
+
+This function has automatically applied the exponentiate to produce the odds and odds ratio:
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+library(sjPlot)
+
+tab_model(beetle_glm)
+
+```
+
+## Predictions
+
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+emmeans::emmeans(beetle_glm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40, 50, 60, 70, 80)), 
+                 type='response') 
+```
+
+## Predictions plot
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+
+means <- emmeans::emmeans(beetle_glm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40:80)), 
+                 type='response')  |> 
+  as_tibble()
+
+ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = Dose,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = Dose,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "Dose", y = "Mortality")+
+  theme_classic(base_size = 14)
+
+```
+
+
+
+## Overdispersion
+
+If the residual deviance of the model is > the residual degrees of freedom - we consider our binomial models to have **overdispersion**. 
+
+This means the variance is greater than predicted by the binomial distribution
+
+Overdispersion > 1.5 can be accounted for with the *quasi-binomial* glm
 
 ## Overdispersion
 
@@ -1445,8 +2827,82 @@ Where:
 
 - $\theta$ term describes additional variance outside of the Binomial distribution
 
+## Fitting the quasibinomial model
+
+```{r}
+#|echo: true
+#|message: false
+
+summary(beetle_glm)
+
+```
+
+```{r}
+#|echo: true
+#|message: false
+
+beetle_quasiglm <- glm(cbind(dead, alive) ~ Dose, family = quasibinomial(link = "logit"), data = beetles)
+
+summary(beetle_quasiglm)
+
+```
+
+
+## Fitting the quasibinomial model
+
+Standard Error, Confidence intervals and p-values WILL change.
+
+Estimates remain the same
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 6
+#| message: false
+
+means <- emmeans::emmeans(beetle_quasiglm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40:80)), 
+                 type='response')  |> 
+  as_tibble()
+
+ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = Dose,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = Dose,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "Dose", y = "Mortality")+
+  theme_classic(base_size = 14)
+
+```
 
 ## Challenge
+
+
+:::: columns
+
+::: {.column}
+
+![](images/cuckoo.jpg){fig-align="center" fig-alt="Cuckoo" width=50%}
+
+:::
+
+::: {.column}
+
+
+On the afternoon of January 28th, 1986 the space shuttle Challenger experienced a critical failure and broke apart in mid air, resulting in the deaths of all seven crewmembers.
+
+After an investigation into the incident, it was discovered that the failure was caused by critical failurs in all six of the O-rings in the solid rocket booster. Additionally, it was revealed that such an incident was foreseeable.
+
+:::
+
+::::
 
 # GLMs for count data {background-color="#D9DBDB"}
 
@@ -1522,7 +2978,7 @@ $y_i \sim \mathcal{N}(\mu_i, \sigma^2)$
 
 ## GLM Poisson
 
-![](images/poisson_regression.webp){fig-align="center" fig-alt="Poisson equation" width=100%}
+![](images/poisson_regression.webp){fig-align="center" fig-alt="Poisson equation" width=80%}
 
 ## Poisson limitations
 
@@ -1980,7 +3436,7 @@ ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = intera
        x = "Number of Failures",
        y = "Probability",
        color = "Number of Successes (r)") +
-  theme_minimal()+
+  theme_minimal(base_size = 14)+
   facet_wrap(~p)+
   gghighlight::gghighlight()
 
@@ -2008,53 +3464,6 @@ Negative binomial is not in the `glm()` function
 
 ## Challenge
 
-# Other distributions {background-color="#D9DBDB"}
-
-## Gamma
-
-:::: columns
-
-::: {.column}
-
-```{r}
-#| eval: true
-#| echo: false
-#| fig-height: 8
-#| message: false
-
-# Define a range of shape values
-shape_values <- c(1, 2, 5, 10)
-scale_value <- 2 # Keep scale fixed for simplicity
-
-# Generate the Gamma distribution data
-gamma_data <- map_df(shape_values, ~tibble(
-  shape = .x,
-  x = seq(0, 20, length.out = 100),
-  density = dgamma(seq(0, 20, length.out = 100), shape = .x, scale = scale_value)
-)) %>%
-  mutate(shape = factor(shape, levels = shape_values)) # For ordered plotting
-
-# Plot
-ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
-  geom_line() +
-  scale_color_brewer(palette = "Dark2") +
-  labs(title = "Change in Gamma Distribution with Different Shape Parameters",
-       x = "Value",
-       y = "Density",
-       color = "Shape Parameter") +
-  theme_minimal()
-
-```
-
-::: 
-
-::: {.column}
-
-Second column
-
-:::
-
-::::
 
 # Simulate {background-color="#D9DBDB"}
 
