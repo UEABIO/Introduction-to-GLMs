@@ -177,9 +177,9 @@ library(sjPlot)
 
 - Slides available [here](https://ueabio.github.io/Introduction-to-GLMs/)
 
-- Data available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/scripts/data)
+- Data available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/slides/data)
 
-- Scripts available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/scripts/scripts)
+- Scripts available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/slides/scripts)
 
 - Posit Cloud workspace available [here](https://posit.cloud/spaces/487933/join?access_code=vcIMD3l3DmNdEZkqVJAocY1xJQlfqTd2r_9adPH1)
 
@@ -3089,6 +3089,8 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
+
+<br><br>
 
 ![](images/space-shuttle.jpg){fig-align="center" fig-alt="Challenger" width=60%}
 
