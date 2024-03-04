@@ -2025,23 +2025,21 @@ tab_model(fly_gamma)
 
 ```
 
-## Summary table
+## Summary table & Figures
+
 
 ```{r}
 #| echo: false
 #| eval: true
 #| message: false
+#| layout-ncol: 2
+#| fig-height: 8
 
 library(gtsummary)
 
 tbl_regression(fly_gamma)
 
-```
 
-
-## Figures
-
-```{r}
 # Co-erce emmeans to a tibble  - provide range of required predictions for thorax 
 means <- emmeans::emmeans(fly_gamma, 
                  specs = ~ type + thorax,
@@ -2073,8 +2071,10 @@ fruitfly |>
        x = "Thorax length (mm)",
        fill = "Type of female exposure")+
   guides(colour = "none")+
-  theme_classic()
+  theme_classic(base_size = 16)
 ```
+
+
 
 # GLMs for binary data {background-color="#D9DBDB"}
 
