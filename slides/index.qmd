@@ -2096,6 +2096,10 @@ Called a logistic regression or logit model
 
 ## Binary variables
 
+:::::{.columns}
+
+::::{.column}
+
 ```{r}
 #| eval: true
 #| echo: false
@@ -2108,6 +2112,7 @@ load(file = "../data/Mayflies.rda")
 ```
 
 
+
 :::{.incremental}
 
 - Investigating mayfly abundance in relation to pollution gradient measured in Cumulative Criterion Units (CCU)
@@ -2118,7 +2123,17 @@ load(file = "../data/Mayflies.rda")
 
 :::
 
-## Example
+::::
+
+::::{.column}
+
+![](images/Ephemera.png){fig-align="center" fig-alt="Ephemera vulgata" width=60%}
+
+::::
+
+:::::
+
+## Example: Mayflies
 
 Fitting a linear regression vs a logit-link regression:
 
@@ -2398,12 +2413,15 @@ $$\frac{p}{1-p}	=	e^{\beta_{0}}e^{\beta_{1}x_{1}}e^{\beta_{2}x_{2}}$$
 
 For the intercept: 
 
+:::{.incremental}
+
 - The estimate as log odds is 5.102.
 
 - Therefore the odds are 164
 
 - Over 99% probability of observing mayfly when CCU = 0
 
+:::
 
 ::::
 
@@ -2427,10 +2445,13 @@ summary(mayfly_glm)
 
 For the predictor variable `CCU`:
 
+:::{.incremental}
+
 - The estimate is -3.051.
 
 - This means that for every one unit increase in `CCU`, the log odds of the response variable **decreases by 3.051**, holding all other predictors constant.
 
+:::
 
 ::::
 
@@ -2483,7 +2504,15 @@ broom::tidy(mayfly_glm, exponentiate = T)
 
 * Work with the odds and probability calculators
 
-* Check how comfortable you are with additive log-odds, multiplicative odds and changing probability
+* Check how comfortable you are with 
+
+- additive log-odds 
+
+- multiplicative odds 
+
+- changing probability
+
+* Can you work out the probability of mayfly occupancy at each CCU level?
 
 ```{r}
 #| label: ex-odds-timer
@@ -2518,7 +2547,7 @@ dresid <- resid(mayfly_glm, type = "deviance")
 hist(dresid)
 
 # Plot leverage
-plot(mayfly_glm, which = 2)
+plot(mayfly_glm, which = 5)
 
 # Plot Cook's distance
 plot(mayfly_glm, which = 4)
@@ -2532,7 +2561,7 @@ Residuals in binary glms will never be normally distributed - so a "residuals vs
 ```{r}
 #| eval: true
 #| echo: false
-#| fig-height: 8
+#| fig-height: 6
 #| message: false
 
 plot(mayfly_glm, which = 1)
@@ -2544,6 +2573,8 @@ plot(mayfly_glm, which = 1)
 
 - [DHARMa](https://theoreticalecology.wordpress.com/2016/08/28/dharma-an-r-package-for-residual-diagnostics-of-glmms/) works by **simulating residuals** from the fitted model, comparing them with observed residuals, and providing diagnostic plots to assess model adequacy and identify potential issues like heteroscedasticity or influential data points.
 
+:::{.fragment}
+
 ```{r}
 #| echo: true
 #| eval: true
@@ -2552,6 +2583,7 @@ plot(simulateResiduals(mayfly_glm))
 
 ```
 
+:::
 
 ## Prediction
 
@@ -2597,7 +2629,10 @@ The `emmeans` package in R computes estimated marginal means (EMMs) it can also 
 emmeans::emmeans(mayfly_glm, 
                  specs = ~ CCU, 
                  at=list(CCU=c(0:5)), 
-                 type='response') 
+                 type='response') |> 
+  as_tibble()|> 
+  gt::gt() |> 
+  gt::fmt_number(columns = everything(), n_sigfig = 2)
 
 
 ```
@@ -2682,7 +2717,7 @@ ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
 ```{r}
 #| label: ex-malaria-timer
 countdown::countdown(
-  minutes = 30,
+  minutes = 40,
   color_border = "#00AEEF",
   color_text = "#00AEEF",
   color_running_text = "white",
@@ -2845,7 +2880,13 @@ beetles
 
 Bernoulli deals with the outcome of the single trial of the event, whereas Binomial deals with the outcome of the multiple trials of the single event.
 
-Bernoulli is used when the outcome of an event is required for only one time, whereas the Binomial is used when the outcome of an event is required multiple times.
+<br>
+
+Bernoulli is used when the outcome of an event is required for only one time, 
+
+<br>
+
+whereas the Binomial is used when the outcome of an event is required multiple times.
 
 ## Binomial glm
 
@@ -2879,7 +2920,123 @@ summary(beetle_glm_weights)
 ```
 
 
-## 
+## Checking Binomial model fit
+
+- For a Binomial model standard residual checks do not apply
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: false
+
+# Calculate and plot "deviance" residuals
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+pred <- predict(beetle_glm_weights) 
+dresid <- resid(beetle_glm_weights, type = "deviance")
+
+# Check for overdispersion
+hist(dresid)
+
+# Binned residuals
+arm::binnedplot(dresid, pred)
+
+# Plot leverage
+plot(beetle_glm_weights, which = 5)
+
+plot(beetle_glm_weights, which = 2)
+
+
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: true
+
+# Calculate and plot "deviance" residuals
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+pred <- predict(beetle_glm_weights) 
+dresid <- resid(beetle_glm_weights, type = "deviance")
+
+# Check for overdispersion
+hist(dresid)
+
+# Binned residuals
+arm::binnedplot(dresid, pred)
+
+# Plot leverage
+plot(beetle_glm_weights, which = 5)
+
+plot(beetle_glm_weights, which = 2)
+
+
+```
+
+:::
+
+::::
+
+
+## Performance residual checks
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: true
+
+performance::check_model(beetle_glm_weights)
+
+```
+
+:::
+
+:::{.column}
+
+```{r}
+#| echo: true
+#| eval: true
+
+performance::binned_residuals(beetle_glm_weights)
+
+```
+
+:::
+
+::::
+
+## Checking with DHARMa
+
+
+- [DHARMa](https://theoreticalecology.wordpress.com/2016/08/28/dharma-an-r-package-for-residual-diagnostics-of-glmms/) works by **simulating residuals** from the fitted model, comparing them with observed residuals, and providing diagnostic plots to assess model adequacy and identify potential issues like heteroscedasticity or influential data points.
+
+:::{.fragment}
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+#| warning: false
+
+library(DHARMa)
+plot(simulateResiduals(beetle_glm_weights))
+```
+
+:::
+
+## Confidence intervals
 
 ```{r}
 #| echo: true
@@ -2956,7 +3113,7 @@ ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
 
 ## Overdispersion
 
-If the residual deviance of the model is > the residual degrees of freedom - we consider our binomial models to have **overdispersion**. 
+If the **residual deviance of the model is > the residual degrees of freedom** - we consider our binomial models to have **overdispersion**. 
 
 This means the variance is greater than predicted by the binomial distribution
 
@@ -3076,7 +3233,7 @@ The question of interest is:
 ```{r}
 #| label: ex-challenger-timer
 countdown::countdown(
-  minutes = 30,
+  minutes = 40,
   color_border = "#00AEEF",
   color_text = "#00AEEF",
   color_running_text = "white",
@@ -3611,6 +3768,11 @@ Overdispersion occurs when the variance in the data is even higher than the mean
 : Overdispersion statistic values > 1
 
 
+## Choosing a model
+
+![](images/dispParam.png){fig-align="center" fig-alt="Poisson/NegBin" width=50%}
+
+
 ## Overdispersion and what to do about it
 
 It may be true that you are initially unsure whether overdispersion is coming from zero-inflation, larger variance than the mean or both. 
@@ -3618,6 +3780,9 @@ It may be true that you are initially unsure whether overdispersion is coming fr
 You can fit models with the same dependent and independent variables and different error structures and use AIC to help determine the best model for your data
 
 ## Overdispersion in the cuckoo model
+
+
+$\phi = \frac{\text{Residual deviance}}{\text{Residual degrees of freedom}}$ = $\frac{436}{47} = 9.2$
 
 ```{r}
 #| eval: true
@@ -3651,6 +3816,21 @@ Confidence intervals and p-values WILL change.
 
 ## Exercise
 
+```{r}
+#| label: ex-quasi-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
 
 * Fit a quasipoisson model to the cuckoo data
 
@@ -3658,7 +3838,7 @@ Confidence intervals and p-values WILL change.
 #| eval: true
 #| echo: true
 
-cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=quasipoisson(link="log"))
+cuckoo_glmq <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=quasipoisson(link="log"))
 ```
 
 * Look at the residual plots - how have they changed? 
@@ -3667,6 +3847,18 @@ cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=
 
 * Calculate new 95% confidence intervals
 
+## Compare models
+
+```{r}
+#| eval: true
+#| echo: true
+#| layout-ncol: 2
+
+summary(cuckoo_glm2)
+
+summary(cuckoo_glmq)
+
+```
 
 ## F distributions
 
@@ -3678,9 +3870,12 @@ Though here for a term with only one degree of freedom $t^2$ = the F distributio
 #| eval: true
 #| echo: true
 
-drop1(cuckoo_glm2, test = "F")
+drop1(cuckoo_glmq, test = "F")
 
 ```
+
+
+# Zero-inflation  {background-color="#D9DBDB"}
 
 ## Zero-inflation
 
@@ -3833,6 +4028,7 @@ qqline(sresid, col = "red")
 
 ::::
 
+# Negative Binomial {background-color="#D9DBDB"}
 
 ## Negative Binomial
 
@@ -3920,26 +4116,6 @@ model <- glm.nb(y ~ x1 + x2, link = "log", data = dataframe)
 
 :::: columns
 
-::: {.column}
-
-![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
-:::
-
-:::{.column}
-
-The example is an experiment measuring the effect of the parasitic tapeworm *Schistocephalus solidus* infection on the susceptibility of infection from a second parasite, the trematode *Diplostomum pseudospathaceum*
-
-The question of interest is:
-
-> How does Treatment/Infection status affect trematode counts?
-
-:::
-
-::::
-
-
-## Exercise
-
 ```{r}
 #| label: ex-stickpois-timer
 countdown::countdown(
@@ -3955,6 +4131,23 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
+
+::: {.column}
+
+![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
+:::
+
+:::{.column}
+
+<br><br>
+
+The example is an experiment measuring the effect of the parasitic tapeworm *Schistocephalus solidus* infection on the susceptibility of infection from a second parasite, the trematode *Diplostomum pseudospathaceum*
+
+The question of interest is:
+
+> How does Treatment/Infection status affect trematode counts?
+
+:::
 
 
 - Determine whether the poisson model is suitable for this dataset?
@@ -3972,11 +4165,16 @@ stick_poisson <- glm(Diplo_intensity ~ Treatment, family = "poisson", data = par
 
 ```
 
+
+::::
+
+
+
 ## Univariate distribution
 
 ```{r}
 #| echo: true
-#| fig-height: 7
+#| fig-height: 6
 #| warning: false
 
 par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
@@ -4146,7 +4344,6 @@ geom_pointrange(data = means_zip,
 * Mixed Effects Models and Extensions in Ecology with R - Zuur, et al.
 
 * Ecological Statistics with contemporary theory and application
-
 
 
 ## 
