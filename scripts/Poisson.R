@@ -3,6 +3,7 @@ library(pscl)
 
 
 sol.zip <- zeroinfl(Soleolifera ~ Treatment | Treatment, dist = "poisson", link = "logit", data = reveg)
+
 r2_zeroinflated(sol.zip)
 
 

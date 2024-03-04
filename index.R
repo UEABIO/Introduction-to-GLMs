@@ -1,4 +1,4 @@
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| include: false
 #| message: false
 #| warning: false
@@ -10,11 +10,16 @@ library(equatiomatic)
 library(MASS)
 library(pscl)
 library(DHARMa)
+library(lmtest)
 library(fitdistrplus)
+library(emmeans)
+library(gtsummary)
+library(sjPlot)
+library(car)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: true
 ## covid <- readr::read_csv(
@@ -22,7 +27,7 @@ library(fitdistrplus)
 ##   )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -66,33 +71,121 @@ ggplot(aes(x = x, y = density, color = mean)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: false
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
+#| message: false
+
+
+janka <- readr::read_csv("../data/janka.csv")
+
+model <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka)
+
+plot(model, which=2)
+
+plot(model, which=3)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
+#| message: false
+
+cuckoo <- read_csv("../data/cuckoo.csv")
+
+cuckoo_lm <- lm(Beg ~ Mass + Species + Mass:Species, data = cuckoo)
+
+plot(cuckoo_lm, which=2)
+
+plot(cuckoo_lm, which=3)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| layout-ncol: 2
+#| fig-height: 7
+#| message: false
+
+load(file = "../data/Mayflies.rda")
+
+Mayflies_lm <- lm(Occupancy ~ CCU, data = Mayflies)
+
+plot(Mayflies_lm, which=2)
+
+plot(Mayflies_lm, which=3)
+
+
+## ----------------------------------------------------------------------------------------------
+#| fig-height: 7
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+plot(model)
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+plot(model, which=1)
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+plot(model, which=2)
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+plot(model, which=3)
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+plot(model, which=4)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| fig-height: 7
+
+library(performance)
+check_model(model)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
 #| echo: true
 #| message: false
 
-## car::vif(mod)
-## lmtest::bptest(mod)
-## 
-## sresid <- residuals(janka_gamma, type = "pearson")
-## bptest(janka_gamma, ~ sresid)
-## 
-## 
-## shapiro.test(residuals(model))
-## 
+# lmtest::bptest(model)
+
+performance::check_normality(model)
+
+# shapiro.test(residuals(model))
+
+performance::check_heteroscedasticity(model)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
-#| fig-height: 8
+#| fig-height: 7
 #| message: false
 
 janka <- readr::read_csv("../data/janka.csv")
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -103,7 +196,6 @@ janka_ls <- lm(hardness ~ dens, data = janka)
 
 summary(janka_ls)
 
-
 janka |> 
   ggplot(aes( x = dens, y = hardness))+
   geom_point()+
@@ -111,7 +203,7 @@ janka |>
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| label: ex-lm-timer
 countdown::countdown(
   minutes = 10,
@@ -127,7 +219,7 @@ countdown::countdown(
 )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -139,7 +231,7 @@ plot(janka_ls, which=2)
 plot(janka_ls, which=3)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| fig-height: 8
@@ -157,7 +249,7 @@ shapiro.test(residuals(janka_ls))
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| label: ex-transform-lm-timer
 countdown::countdown(
   minutes = 15,
@@ -173,7 +265,16 @@ countdown::countdown(
 )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| fig-height: 7
+
+MASS::boxcox(janka_ls)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -188,7 +289,7 @@ plot(janka_sqrt, which=3)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -203,7 +304,7 @@ ggplot(janka, aes(x = hardness, y = dens)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -218,7 +319,19 @@ plot(janka_log, which=3)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+ggplot(janka, aes(x = hardness, y = dens)) +
+  geom_point() +  # scatter plot of original data points
+  geom_smooth(method = "lm", formula = (y ~ log(x))) +  # regression line
+  labs(title = "Log Linear Regression",
+       x = "X", y = "Y")  # axis labels and title
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -233,29 +346,16 @@ plot(janka_poly, which=3)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: true
-#| echo: true
-#| fig-height: 8
-#| message: false
-
-
-summary(janka_poly)
-
-
-
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
 #| fig-height: 8
 #| message: false
 
-ggplot(janka, aes(x = hardness, y = dens)) +
-  geom_point() +  # scatter plot of original data points
-  geom_smooth(method = "lm", formula = (y ~ log(x))) +  # regression line
-  labs(title = "Log Linear Regression",
-       x = "X", y = "Y")  # axis labels and title
+summary(janka_poly)
+
+
 
 ggplot(janka, aes(x = hardness, y = dens)) +
   geom_point() +  # scatter plot of original data points
@@ -267,7 +367,16 @@ ggplot(janka, aes(x = hardness, y = dens)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| message: false
+
+janka_wls <- lm(sqrt(hardness) ~ dens, weights = 1/sqrt(hardness), data = janka)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -282,10 +391,11 @@ plot(janka_wls, which=3)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
-#| echo: true
+#| echo: false
 #| fig-height: 8
+#| layout-ncol: 2
 #| message: false
 
 prediction_data <- data.frame(dens = sort(unique(janka$dens)))
@@ -301,9 +411,40 @@ ggplot(janka) +
     geom_line(data = prediction_data, aes(x = dens, y = wls_pred), color = "blue")+
   geom_point(aes(x = dens, y = sqrt(hardness)))
 
+summary(janka_wls)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-glm-timer
+countdown::countdown(
+  minutes = 5,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| fig-height: 8
+#| message: false
+
+
+janka_glm <- glm(hardness ~ dens, data = janka, family = gaussian(link = "identity"))
+
+summary(janka_glm)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| fig-height: 8
@@ -316,9 +457,25 @@ summary(janka_glm)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: true
+## ----------------------------------------------------------------------------------------------
+#| eval: false
 #| echo: true
+#| fig-height: 8
+#| message: false
+
+## 
+## ggplot(janka, aes(x = dens, y = hardness)) +
+##   geom_point() +  # scatter plot of original data points
+##   geom_smooth(method = "glm", method.args = list(gaussian(link = "sqrt"))) +  # regression line
+##   labs(title = "Linear Regression with ggplot2",
+##        x = "X", y = "Y")  # axis labels and title
+## 
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
 #| fig-height: 8
 #| message: false
 
@@ -332,7 +489,7 @@ ggplot(janka, aes(x = dens, y = hardness)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| layout-ncol: 2
@@ -347,25 +504,99 @@ plot(janka_glm, which=3)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
-#| echo: false
-#| fig-height: 8
+#| echo: true
+#| fig-height: 7
 #| message: false
 
 library(fitdistrplus)
 
-par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
-fg <- fitdist(sqrt(janka$hardness), "gamma")
-fn <- fitdist(sqrt(janka$hardness), "norm")
+descdist(janka$hardness, boot = 500)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: false
+#| echo: true
+#| fig-height: 8
+#| message: false
+#| warning: false
+
+## library(fitdistrplus)
+## 
+## par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+## fg <- fitdist(sqrt(janka$hardness), "gamma")
+## fn <- fitdist(sqrt(janka$hardness), "norm")
+## plot.legend <- c("normal", "gamma")
+## denscomp(list(fn, fg), legendtext = plot.legend)
+## qqcomp(list(fn, fg), legendtext = plot.legend)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+#| warning: false
+
+library(fitdistrplus)
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fg <- fitdist((janka$hardness), "gamma")
+fn <- fitdist((janka$hardness), "norm")
 plot.legend <- c("normal", "gamma")
 denscomp(list(fn, fg), legendtext = plot.legend)
 qqcomp(list(fn, fg), legendtext = plot.legend)
-cdfcomp(list(fn, fg), legendtext = plot.legend)
-ppcomp(list(fn, fg), legendtext = plot.legend)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| message: false
+
+summary(fg)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| message: false
+
+summary(fn)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+
+# Define a range of shape values
+shape_values <- c(1, 2, 5, 10)
+scale_value <- 2 # Keep scale fixed for simplicity
+
+# Generate the Gamma distribution data
+gamma_data <- map_df(shape_values, ~tibble(
+  shape = .x,
+  x = seq(0, 20, length.out = 100),
+  density = dgamma(seq(0, 20, length.out = 100), shape = .x, scale = scale_value)
+)) %>%
+  mutate(shape = factor(shape, levels = shape_values)) # For ordered plotting
+
+# Plot
+ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
+  geom_line() +
+  scale_color_brewer(palette = "Dark2") +
+  labs(title = "Change in Gamma Distribution with Different Shape Parameters",
+       x = "Value",
+       y = "Density",
+       color = "Shape Parameter") +
+  theme_minimal(base_size = 14)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| fig-height: 8
@@ -378,10 +609,26 @@ summary(janka_gamma)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: true
+## ----------------------------------------------------------------------------------------------
+#| eval: false
 #| echo: true
 #| fig-height: 8
+#| message: false
+
+## 
+## ggplot(janka, aes(x = dens, y = hardness)) +
+##   geom_point() +  # scatter plot of original data points
+##   geom_smooth(method = "glm", method.args = list(Gamma(link = "sqrt"))) +  # regression line
+##   labs(title = "Linear Regression with ggplot2",
+##        x = "X", y = "Y")  # axis labels and title
+## 
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
 #| message: false
 
 
@@ -394,22 +641,23 @@ ggplot(janka, aes(x = dens, y = hardness)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: true
-#| echo: true
-#| message: false
+## ----------------------------------------------------------------------------------------------
+#| label: ex-gamma-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
 
 
-
-library(MuMIn)
-
-#r.squaredLR()
-
-# r squared
-
-
-
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -419,7 +667,7 @@ library(MuMIn)
 # Simulated data
 set.seed(42)
 
-log_likelihood_visual <- function(mean = 6, sd = 2){
+log_likelihood_visual <- function(mean = 6, sd = 1){
 
 data <- rnorm(100, mean = mean, sd = sd)
 
@@ -448,8 +696,251 @@ ggplot(grid, aes(x = mu, y = sigma, z = log_likelihood)) +
   theme_minimal()
 }
 
+log_likelihood_visual()
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-log-timer
+countdown::countdown(
+  minutes = 5,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 6
+#| message: false
+
+
+
+# Simulate some data
+set.seed(123)
+n <- 100  # Sample size
+x <- rnorm(n)  # Predictor variable
+y <- 2 + 3*x + rnorm(n)  # Continuous response variable (linear relationship)
+
+# Fit the null model (intercept only)
+null_model <- lm(y ~ 1)
+
+# Fit the saturated model (fully saturated model)
+saturated_model <- lm(y ~ x)
+
+# Fit the fitted model (linear predictor with x)
+fitted_model <- lm(y ~ x)
+
+# Create a dataframe to store observed points
+observed_data <- data.frame(x = x, y = y)
+
+# Generate fitted lines
+fitted_lines <- data.frame(x = sort(x))
+fitted_lines$Null <- predict(null_model, newdata = fitted_lines)
+fitted_lines$Fitted <- predict(fitted_model, newdata = fitted_lines)
+
+# Plot observed points and fitted lines
+ggplot() +
+    geom_point(data = observed_data, aes(x = x, y = y), color = "black") +
+    geom_line(data = fitted_lines, aes(x = x, y = Null, color = "Null")) +
+    geom_line(data = observed_data, aes(x = x, y = y, color = "Saturated")) +
+    geom_line(data = fitted_lines, aes(x = x, y = Fitted, color = "Fitted")) +
+    scale_color_manual(values = c("Null" = "red", "Saturated" = "blue", "Fitted" = "green"),
+                       name = "Model") +
+    labs(
+        title = "Fitted Lines vs Observed Points",
+        x = "x",
+        y = "y"
+    ) +
+    theme_minimal(base_size = 14)
+
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| message: false
+
+
+
+library(MuMIn)
+
+r.squaredLR(janka_gamma)
+
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-fits-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: false
+#| eval: true
+
+fitted_model <- glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt"))
+null_model <- glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt"))
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+#| echo: true
+#| eval: true
+
+fitted_likelihood <- logLik(glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt")))
+
+null_likelihood <- logLik(glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt")))
+
+LR <- -2*(null_likelihood[1]-fitted_likelihood[1])
+
+LR
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+lrtest(null_model, fitted_model)
+
+
+
+## ----------------------------------------------------------------------------------------------
+summary(fitted_model)
+
+anova(null_model, fitted_model, test = "F")
+
+# drop1(fitted_model, test = "F")
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-fly-glm-timer
+countdown::countdown(
+  minutes = 30,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: false
+#| eval: true
+
+fruitfly <- read_csv("../data/fruitfly.csv")
+
+fly_glm <- glm(longevity ~ type + thorax + sleep, family = gaussian(link = "sqrt"), data = fruitfly)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: true
+#| message: false
+
+# Assuming 'model' is your fitted GLM model
+
+# Extract coefficients and confidence intervals
+coef_ci <- confint(fly_glm)
+
+# Extract estimates
+estimates <- coef(fly_glm)
+
+# Combine estimates with confidence intervals
+estimates_df <- data.frame(
+  estimates = estimates,
+  lower_ci = coef_ci[,1],
+  upper_ci = coef_ci[,2]
+)
+
+# Display dataframe
+estimates_df
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: true
+#| message: false
+
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(fly_glm, conf.int = T)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: true
+#| message: false
+
+# Extract coefficients and confidence intervals on response scale
+coef_ci <- exp(confint(fly_glm))
+
+# Extract estimates
+estimates <- exp(coef(fly_glm))
+
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(fly_glm, conf.int = T, exponentiate = T)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: false
+#| message: false
+
+## library(gtsummary)
+## 
+## tbl_summary(fly_glm)
+## 
+## library(sjPlot)
+## 
+## tab_model(fly_glm)
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: false
+#| eval: true
+#| message: false
+
+library(sjPlot)
+
+tab_model(fly_glm)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -460,25 +951,29 @@ load(file = "../data/Mayflies.rda")
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
-#| echo: true
-#| fig-height: 8
+#| echo: false
+#| fig-height: 7
 #| layout-ncol: 2
 #| message: false
 #| warning: false
 
 ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm")+
+    labs(title = "Linear Regression",
+       x = "CCU", y = "Occupancy") +
+  theme_classic(base_size = 14)
 
 ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
-  geom_smooth(method = "glm", method.args = list(binomial(link = "logit"))) +  # regression line
+  geom_smooth(method = "glm", method.args = list(binomial(link = "logit"))) +
   labs(title = "Logit-link Binomial Regression",
-       x = "X", y = "Y")  # axis labels and title
+       x = "CCU", y = "Occupancy") +
+  theme_classic(base_size = 14)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -501,14 +996,13 @@ ggplot(df, aes(x = Outcome, y = Probability, group = Outcome)) +
   labs(title = "Probability Distribution of a Bernoulli Random Variable",
        x = "Outcome",
        y = "Probability") +
-  theme_minimal()
+  theme_minimal(base_size = 14)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
-#| layout-ncol: 3
 #| message: false
 #| warning: false
 
@@ -547,7 +1041,7 @@ plot(independent_variable, log_odds, type = "l", col = "green", xlab = "Independ
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: true
 #| message: false
@@ -559,7 +1053,22 @@ summary(mayfly_glm)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+summary(mayfly_glm)
+
+
+## ----------------------------------------------------------------------------------------------
+summary(mayfly_glm)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+broom::tidy(mayfly_glm, exponentiate = T)
+
+
+## ----------------------------------------------------------------------------------------------
 #| label: ex-odds-timer
 countdown::countdown(
   minutes = 10,
@@ -575,23 +1084,26 @@ countdown::countdown(
 )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
-#| echo: false
-#| fig-height: 8
+#| echo: true
+#| fig-height: 6
 #| layout-ncol: 3
 #| message: false
 
+# Calculate and plot "deviance" residuals
 dresid <- resid(mayfly_glm, type = "deviance")
 hist(dresid)
 
+# Plot leverage
 plot(mayfly_glm, which = 2)
 
+# Plot Cook's distance
 plot(mayfly_glm, which = 4)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -601,13 +1113,114 @@ plot(mayfly_glm, which = 1)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 library(DHARMa)
 plot(simulateResiduals(mayfly_glm))
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: false
+#| echo: true
+#| message: false
+
+## # Predictions for existing data
+## predict(mayfly_glm, type = "response")
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: false
+#| echo: true
+#| message: false
+
+## # Predictions for new data
+## new_CCU<- data.frame(CCU = c(0,1,2,3,4,5))
+## predict(mayfly_glm, newdata = new_CCU, type = "response")
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+
+emmeans::emmeans(mayfly_glm, 
+                 specs = ~ CCU, 
+                 at=list(CCU=c(0:5)), 
+                 type='response') 
+
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+means <- emmeans::emmeans(mayfly_glm, 
+                 specs = ~ CCU, 
+                 at=list(CCU=c(0:5)), 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = CCU,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = CCU,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "CCU", y = "Occupancy")+
+  theme_classic(base_size = 14)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+means <- emmeans::emmeans(mayfly_glm, 
+                 specs = ~ CCU, 
+                 at=list(CCU=c(0:5)), 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = CCU,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = CCU,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "CCU", y = "Occupancy")+
+  theme_classic(base_size = 14)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-ccu-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
 #| label: ex-malaria-timer
 countdown::countdown(
   minutes = 30,
@@ -623,7 +1236,7 @@ countdown::countdown(
 )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -655,31 +1268,178 @@ ggplot(binom_data, aes(x = success, y = probability, color = trials)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-#| eval: true
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+beetles <- read_csv("../data/beetles.csv")
+beetles
+
+
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+beetles <- beetles |> 
+  rename("dead" = Number_killed,
+         "trials" = Number_tested) |> 
+  mutate("alive" = trials-dead)
+
+beetles
+
+
+
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+#cbind() creates a matrix of successes and failures for each batch
+
+beetle_glm <- glm(cbind(dead, alive) ~ Dose, family = binomial(link = "logit"), data = beetles)
+
+summary(beetle_glm)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+
+beetle_glm_weights <- glm(Mortality_rate ~ Dose, weights = trials, family = binomial(link = "logit"), data = beetles)
+
+summary(beetle_glm_weights)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| echo: true
-#| fig-height: 8
+#| eval: true
 #| message: false
 
-# According to the situation:
-# n = 5,
-# s = 5,
-# p = 0.95,
-# (1 — p) = 0.05
-
-p = 1 * (0.95)^(5) * (0.05)^(0)
-
-p
+# Alternatively, using package-specific functions
+# Example with 'broom' package
+library(broom)
+tidy(beetle_glm, conf.int = T)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: true
+#| message: false
 
-dbinom(5, 5, 0.95)
+library(sjPlot)
+
+tab_model(beetle_glm)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: true
+#| message: false
+emmeans::emmeans(beetle_glm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40, 50, 60, 70, 80)), 
+                 type='response') 
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 7
+#| message: false
+
+means <- emmeans::emmeans(beetle_glm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40:80)), 
+                 type='response')  |> 
+  as_tibble()
+
+ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = Dose,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = Dose,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "Dose", y = "Mortality")+
+  theme_classic(base_size = 14)
+
+
+
+## ----------------------------------------------------------------------------------------------
+summary(beetle_glm_weights)
+
+
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+summary(beetle_glm)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#|echo: true
+#|message: false
+
+beetle_quasiglm <- glm(cbind(dead, alive) ~ Dose, family = quasibinomial(link = "logit"), data = beetles)
+
+summary(beetle_quasiglm)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: false
+#| fig-height: 6
+#| message: false
+
+means <- emmeans::emmeans(beetle_quasiglm, 
+                 specs = ~ Dose, 
+                 at=list(Dose=c(40:80)), 
+                 type='response')  |> 
+  as_tibble()
+
+ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
+    geom_ribbon(data = means,
+              aes(x = Dose,
+                  y = prob,
+                  ymin = asymp.LCL,
+                  ymax = asymp.UCL),
+              alpha = .2)+
+  geom_line(data = means,
+            aes(x = Dose,
+                y = prob)) +  # regression line
+  labs(title = "Logit-link Binomial Regression",
+       x = "Dose", y = "Mortality")+
+  theme_classic(base_size = 14)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-challenger-timer
+countdown::countdown(
+  minutes = 20,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
@@ -708,7 +1468,7 @@ ggplot(poisson_data, aes(x = events, y = probability, color = lambda)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: true
 #| fig-height: 8
@@ -717,14 +1477,14 @@ ggplot(poisson_data, aes(x = events, y = probability, color = lambda)) +
 ## cuckoo_lm <- lm(Beg ~ Mass + Species + Mass:Species, data = cuckoo)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| include: FALSE
 
 cuckoo <- read_csv("../data/cuckoo.csv")
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 7
@@ -745,7 +1505,7 @@ ggplot(aes(x=Mass, y=.fitted, colour=Species)) +
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| echo: false
 #| layout-ncol: 2
 #| fig-height: 8
@@ -755,7 +1515,44 @@ plot(cuckoo_lm, which=2)
 plot(cuckoo_lm, which=3)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+
+descdist(cuckoo$Beg, boot = 500, discrete = T)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| eval: false
+#| fig-height: 7
+#| warning: false
+
+## par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+## fp <- fitdist(cuckoo$Beg, "pois")
+## fn <- fitdist(cuckoo$Beg, "norm")
+## fnb<- fitdist(cuckoo$Beg, "nbinom")
+## plot.legend <- c("normal", "poisson", "negative binomial")
+## denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+## qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: false
+#| fig-height: 7
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(cuckoo$Beg, "pois")
+fn <- fitdist(cuckoo$Beg, "norm")
+fnb<- fitdist(cuckoo$Beg, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+
+
+## ----------------------------------------------------------------------------------------------
 #| echo: true
 
 cuckoo_glm1 <- glm(Beg ~ Mass + Species + Mass:Species, data=cuckoo, family=poisson(link="log"))
@@ -763,7 +1560,7 @@ cuckoo_glm1 <- glm(Beg ~ Mass + Species + Mass:Species, data=cuckoo, family=pois
 summary(cuckoo_glm1)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| label: ex-pois-timer
 countdown::countdown(
   minutes = 10,
@@ -779,7 +1576,23 @@ countdown::countdown(
 )
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+
+summary(cuckoo_glm1)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| layout-ncol: 2
+
+plot(cuckoo_glm1, which=2)
+plot(cuckoo_glm1, which=3)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| echo: false
 #| layout-ncol: 2
 #| fig-height: 8
@@ -789,34 +1602,113 @@ plot(cuckoo_glm1, which=2)
 plot(cuckoo_glm1, which=3)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
-
-cuckoo_glm2 <- glm(Call_Total ~ Mass + Species + Mass:Species, data=cuckoo, offset = log(Mins), family=poisson(link="log"))
-
-
-
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| fig-height: 8
 
 
+car::vif(cuckoo_glm1)
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+#| fig-height: 8
+
+check_model(cuckoo_glm1, check = "vif")
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+cuckoo$mass.c <- cuckoo$Mass - mean(cuckoo$Mass, na.rm =T)
+
+cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=poisson(link="log"))
+
+summary(cuckoo_glm2)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-vif-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+# For a fixed  mean-variance model we use a Chisquare distribution
+drop1(cuckoo_glm2, test = "Chisq")
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+cuckoo_glm3 <- glm(Call_Total ~ mass.c + Species + mass.c:Species, data=cuckoo, offset = log(Mins), family=poisson(link="log"))
+
+summary(cuckoo_glm3)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+summary(cuckoo_glm2)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+cuckoo_glm2 <- glm(Beg ~ mass.c + Species + mass.c:Species, data=cuckoo, family=quasipoisson(link="log"))
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+drop1(cuckoo_glm2, test = "F")
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: true
-#|
+
 ## install.packages("pscl")
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: true
-#|
+## library(pscl)
 ## zip1 <- zeroinf(y ~ x1 + x2 | x1 + x2,
 ##                 dist = "poisson",
 ##                 link = "logit",
 ##                 data = dataframe)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: true
 
@@ -831,10 +1723,62 @@ cuckoo_glm2 <- glm(Call_Total ~ Mass + Species + Mass:Species, data=cuckoo, offs
 ## 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+hist(cuckoo$Beg)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| eval: true
+#| echo: true
+
+check_zeroinflation(cuckoo_glm2)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+
+cuckoo_zip <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
+                   mass.c + Species + mass.c:Species,
+                dist = "poisson",
+                link = "logit",
+                data = cuckoo)
+
+summary(cuckoo_zip)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+
+sresid <- residuals(cuckoo_zip, type = "pearson")
+
+pred <- predict(cuckoo_zip)
+
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+hist(sresid)
+plot(sresid ~ pred)
+qqnorm(sresid)
+qqline(sresid, col = "red")
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
+#| fig-width: 10
 #| message: false
 
 ##Negative Binomial Distribution (Varying Shape Parameter r)
@@ -872,43 +1816,173 @@ ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = intera
        x = "Number of Failures",
        y = "Probability",
        color = "Number of Successes (r)") +
-  theme_minimal()+
+  theme_minimal(base_size = 14)+
   facet_wrap(~p)+
   gghighlight::gghighlight()
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| eval: false
+#| echo: false
+#| message: false
+
+## library(MASS)
+## 
+## model <- glm.nb(y ~ x1 + x2, link = "log", data = dataframe)
+## 
+
+
+## ----------------------------------------------------------------------------------------------
+#| label: ex-stickpois-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: true
 #| echo: false
 #| fig-height: 8
+#| fig-width: 10
 #| message: false
 
-# Define a range of shape values
-shape_values <- c(1, 2, 5, 10)
-scale_value <- 2 # Keep scale fixed for simplicity
+parasite <- read_csv("../data/parasite_exp.csv")
 
-# Generate the Gamma distribution data
-gamma_data <- map_df(shape_values, ~tibble(
-  shape = .x,
-  x = seq(0, 20, length.out = 100),
-  density = dgamma(seq(0, 20, length.out = 100), shape = .x, scale = scale_value)
-)) %>%
-  mutate(shape = factor(shape, levels = shape_values)) # For ordered plotting
-
-# Plot
-ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
-  geom_line() +
-  scale_color_brewer(palette = "Dark2") +
-  labs(title = "Change in Gamma Distribution with Different Shape Parameters",
-       x = "Value",
-       y = "Density",
-       color = "Shape Parameter") +
-  theme_minimal()
+stick_poisson <- glm(Diplo_intensity ~ Treatment, family = "poisson", data = parasite)
 
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(parasite$Diplo_intensity, "pois")
+fn <- fitdist(parasite$Diplo_intensity, "norm")
+fnb<- fitdist(parasite$Diplo_intensity, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+summary(stick_poisson)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+check_zeroinflation(stick_poisson)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Quasilikelihood
+stick_quasi <- glm(Diplo_intensity ~ Treatment, family = quasipoisson, data = parasite)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Neg bin
+stick_nb <- glm.nb(Diplo_intensity ~ Treatment, link = "log", data = parasite)
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Zero-inflated model
+stick_zip <- zeroinfl(Diplo_intensity ~ Treatment| 
+                   Treatment,
+                dist = "poisson",
+                link = "logit",
+                data = parasite)
+
+
+
+
+## ----------------------------------------------------------------------------------------------
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+
+AIC(stick_poisson)
+AIC(stick_quasi)
+AIC(stick_nb)
+AIC(stick_zip)
+
+
+
+## ----------------------------------------------------------------------------------------------
+
+colors <- c("Quasi" = "cyan", "NegBin" = "darkorange", "ZeroInfl" = "purple")
+
+means_quasi <- emmeans::emmeans(stick_quasi, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_nb <- emmeans::emmeans(stick_nb, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_zip <- emmeans::emmeans(stick_zip, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(parasite, aes(x=Treatment, y=Diplo_intensity)) + 
+  geom_jitter(width = .2,
+              alpha = .4)+
+ geom_pointrange(data = means_quasi,
+                 aes(x = Treatment,
+                     y = rate,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     colour = "Quasi"))+
+geom_pointrange(data = means_nb,
+                 aes(x = Treatment,
+                     y = response,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "NegBin"),
+                position = position_nudge(x= .2))+
+geom_pointrange(data = means_zip,
+                 aes(x = Treatment,
+                     y = emmean,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "ZeroInfl"),
+                position = position_nudge(x= -.2))+  
+  theme_classic(base_size = 14)+
+  scale_color_manual(values = colors)
+
+
+
+## ----------------------------------------------------------------------------------------------
 #| eval: false
 #| echo: false
 
@@ -918,7 +1992,7 @@ ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
 ## car::qqPlot(exp(log.resid), dist = "weibull", shape = 1/model3$scale)
 
 
-## -----------------------------------------------------------------------------------------------------------------------------------------
+## ----------------------------------------------------------------------------------------------
 #| label: ex-4-timer
 countdown::countdown(
   minutes = 10,

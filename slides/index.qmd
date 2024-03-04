@@ -1,5 +1,5 @@
 ---
-title: "Introduction to Generalized Linear Models"
+title: "Introduction to Generalised Linear Models"
 subtitle: "ESA and Physalia Collaboration<br><small>4th March 2024</small>"
 author: "Dr Philip Leftwich"
 format:
@@ -16,19 +16,21 @@ format:
 #| message: false
 #| warning: false
 
-library(tidyverse)
-library(MuMIn)
 library(arm)
-library(equatiomatic)
-library(MASS)
-library(pscl)
-library(DHARMa)
-library(lmtest)
-library(fitdistrplus)
-library(emmeans)
-library(gtsummary)
-library(sjPlot)
 library(car)
+library(DHARMa)
+library(emmeans)
+library(equatiomatic)
+library(fitdistrplus)
+library(gtsummary)
+library(lmtest)
+library(MASS)
+library(MuMIn)
+library(performance)
+library(pscl)
+library(tidyverse)
+library(sjPlot)
+
 
 ```
 
@@ -55,11 +57,11 @@ Associate Professor in Data Science and Genetics at the [University of East Angl
 
 <br>
 
-Academic background in ... .
+Academic background in Behavioural Ecology, Genetics, and Insect Pest Control.
 
 <br>
 
-Social media at []().
+Teach Genetics, Programming, and Statistics
 
 :::
 
@@ -70,7 +72,29 @@ Social media at []().
 :::
 :::
 
-## Outline
+## About me
+
+::: columns
+::: {.column .right}
+
+
+Norwich - "A Fine City!"
+
+![](images/norwich.jpeg){fig-align="center" fig-alt="Norwich cathedral" width=90%}
+
+:::
+
+::: {.column}
+
+![](images/norwich_map_position_in_uk_000001.png){fig-align="center" fig-alt="Norwich on a map" width=70%}
+
+:::
+:::
+
+# Introduce yourselves {background-color="#D9DBDB"}
+
+
+## Outline of the course
 
 - Why be normal? 
 
@@ -80,7 +104,9 @@ Social media at []().
 
 ## What to expect during this workshop
 
-These workshop will run for *2 hours* each.
+These workshop will run for *4 hours* each.
+
+We will have a 30 min break halfway through
 
 * Combines slides, live coding examples, and exercises for you to participate in.
 
@@ -114,32 +140,48 @@ I hope you end up with more questions than answers after this workshop!
 
 * You know how to perform linear regression.
 
-## Introduce yourselves
+* You want to learn some **Generalised** Linear Models
 
-https://blog.slido.com/virtual-icebreakers/
 
 ## Workshop resources
 
-
-## Data
-
-> Guidotti, E., Ardia, D., (2020), “COVID-19 Data Hub”, Journal of Open Source Software 5(51):2376, doi: [10.21105/joss.02376](10.21105/joss.02376).
-
-## Data
-
-How to download:
+Suggested R packages: 
 
 ```{r}
 #| eval: false
 #| echo: true
-covid <- readr::read_csv(
-  "https://raw.githubusercontent.com/nrennie/f4sg-gams/main/data/covid.csv"
-  )
+
+
+library(arm)
+library(car)
+library(DHARMa)
+library(emmeans)
+library(equatiomatic)
+library(fitdistrplus)
+library(gtsummary)
+library(lmtest)
+library(MASS)
+library(MuMIn)
+library(performance)
+library(pscl)
+library(tidyverse)
+library(sjPlot)
+
+
 ```
 
-<br>
 
-* See `data/` folder on GitHub for pre-processing.
+## Workshop Resources
+
+<br><br>
+
+- Slides available [here](https://ueabio.github.io/Introduction-to-GLMs/)
+
+- Data available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/scripts/data)
+
+- Scripts available [here](https://github.com/UEABIO/Introduction-to-GLMs/tree/scripts/scripts)
+
+- Posit Cloud workspace available [here](https://posit.cloud/spaces/487933/join?access_code=vcIMD3l3DmNdEZkqVJAocY1xJQlfqTd2r_9adPH1)
 
 
 # General linear models {background-color="#D9DBDB"}
@@ -150,7 +192,11 @@ covid <- readr::read_csv(
 
 - It aims to fit a regression line which minimises the squared differences between observed and predicted values
 
+:::{.fragment}
+
 ![](images/ols.png){fig-align="center" fig-alt="ordinary least squares" width=70%}
+
+:::
 
 ## Equation of the line
 
@@ -232,7 +278,7 @@ ggplot(aes(x = x, y = density, color = sd)) +
        x = "X",
        y = "Probability",
        color = "SD") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 16)
 
 norm_data |> 
   filter(sd == 7) |> 
@@ -243,17 +289,21 @@ ggplot(aes(x = x, y = density, color = mean)) +
        x = "X",
        y = "Probability",
        color = "Mean") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 16)
 
 ```
 
 
 ## Normal distribution of the residuals
 
-When using our residuals to calculate standard error, confidence intervals and statistical significance these are assumed to be drawn from a normal distribution with mean zero and a constant variance. 
+When using our residuals to calculate standard error, confidence intervals and statistical significance these are assumed to be drawn from:
+
+- a normal distribution with mean zero 
+
+- with a constant variance. 
 
 :::{.fragment}
-
+<br>
 This implies that the residuals, or the distances between the observed values and the values predicted by the linear model, can be modeled by drawing random values from a normal distribution.
 
 :::
@@ -268,7 +318,11 @@ $$
 
 :::{.fragment}
 
-Which literally means that $y_i$ is drawn from a normal distribution with parameters $\mu$ (which depends on $x_i$) and $\sigma$(which has the same value for all measures of $Y$).
+Which literally means that $y_i$ is drawn from a normal distribution with parameters:
+
+- $\mu$ (which depends on $x_i$)  
+
+- $\sigma$ (which has the same value for all measures of $Y$).
 
 :::
 
@@ -512,13 +566,13 @@ performance::check_heteroscedasticity(model)
 
 ::::
 
-# Generalised Linear Models? {background-color="#D9DBDB"}
+# Generalised Linear Models {background-color="#D9DBDB"}
 
 ## What are Generalised linear models?
 
 :::{.incremental}
 
-- The Generalized Linear Model (GLM) is an extension of the ordinary linear regression model that accommodates a broader range of response variable types and error distributions.
+- The Generalised Linear Model (GLM) is an extension of the ordinary linear regression model that accommodates a broader range of response variable types and error distributions.
 
 - Key components: 
 
@@ -557,6 +611,8 @@ $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \ldots + \beta_n x_{ni}$
 
 :::
 
+- $\eta_i$ the linear prediction for observation $i$
+
 :::
 
 
@@ -588,6 +644,12 @@ $g(\mu_i) = \eta_i$
 :::
 
 :::{.fragment}
+
+- $\eta_i$ linear prediction for observation $i$
+
+- $g$ the link function relating the linear predictor to the expected value (mean) of the response variable
+
+- $\mu_i$ is the expected value of the response variable for observation $i$
 
 Common link functions: identity, sqrt, log, logit
 
@@ -626,6 +688,8 @@ $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
 
 :::{.fragment}
 
+ - $\epsilon_i$ is the error term for observation $i$
+
 **Examples:** Gaussian (normal), binomial, Poisson, gamma, etc.
 
 :::
@@ -636,15 +700,15 @@ $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
 
 :::{.column}
 
-Linear Predictor ($\eta$):
+**Linear Predictor** ($\eta$):
 
 $\eta_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \ldots$
 
-Link Function ($g$):
+**Link Function** ($g$):
 
 $g(\mu_i) = \eta_i$
 
-Probability Distribution:
+**Probability Distribution**:
 
 $\mu_i = f(\eta_i)$
 
@@ -654,7 +718,7 @@ $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$
 
 :::{.column}
 
-- $\eta_i$ linear predictor for observation $i$
+- $\eta_i$ linear prediction for observation $i$
 
 - $g$ the link function relating the linear predictor to the expected value (mean) of the response variable
 
@@ -731,7 +795,7 @@ janka |>
 ```
 
 
-## Challenge
+## Challenge: Fit a Linear Model
 
 <br><br>
 
@@ -754,7 +818,6 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
-
 
 
 ## Model diagnostics
@@ -795,10 +858,13 @@ shapiro.test(residuals(janka_ls))
 
 ## Challenge
 
+<br><br>
 
 * What can we try to improve the fit of our `lm(hardness ~ dens, data = janka)` ?
 
-* Let's make suggestions then try them out
+<br>
+
+* Let's make suggestions then try them out:
 
 ```{r}
 #| label: ex-transform-lm-timer
@@ -815,7 +881,6 @@ countdown::countdown(
   font_size = "2em"
 )
 ```
-
 
 
 ## BoxCox
@@ -1031,7 +1096,10 @@ summary(janka_wls)
 
 :::
 
-## A Generalized linear model approach
+
+# A Generalised Linear Model Example {background-color="#D9DBDB"}
+
+## A Generalised linear model approach
 
 
 * Fit a `glm(gaussian(link = "identity"))` to the data
@@ -1068,7 +1136,7 @@ summary(janka_glm)
 
 ```
 
-## A Generalized linear model approach
+## A Generalised linear model approach
 
 We previously identified that the **square root** of the dependent variable might have been a better fit with our linear model:
 
@@ -1200,8 +1268,8 @@ descdist(janka$hardness, boot = 500)
 library(fitdistrplus)
 
 par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
-fg <- fitdist(sqrt(janka$hardness), "gamma")
-fn <- fitdist(sqrt(janka$hardness), "norm")
+fg <- fitdist(janka$hardness, "gamma")
+fn <- fitdist(janka$hardness, "norm")
 plot.legend <- c("normal", "gamma")
 denscomp(list(fn, fg), legendtext = plot.legend)
 qqcomp(list(fn, fg), legendtext = plot.legend)
@@ -1297,7 +1365,7 @@ ggplot(gamma_data, aes(x = x, y = density, color = shape)) +
        x = "Value",
        y = "Density",
        color = "Shape Parameter") +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 16)
 
 ```
 
@@ -1309,7 +1377,7 @@ $f(x;\alpha,\beta) = \frac{\beta^\alpha x^{\alpha - 1} e^{-\beta x}}{\Gamma(\alp
 
 - Shape (α): Determines the shape or curve of the distribution. Higher values of α result in distributions that are more peaked and skewed to the left.
 
-- Rate (β): Influences the scale or spread of the distribution. Smaller values of β result in distributions that are more spread out, while larger values of β lead to distributions that are more concentrated around the mean.
+- Rate (β): Influences the spread of the distribution. Smaller values of β result in distributions that are more spread out, larger values of β lead to distributions that are less spread out.
 
 - Useful for modelling **positively skewed continuous  non-negative data**
 
@@ -1380,9 +1448,11 @@ ggplot(janka, aes(x = dens, y = hardness)) +
 
 ::::
 
-## Exercise
+## Exercise: Gamma
 
 * Fit the Gamma distribution linear model to the data.
+
+* `glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt")`
 
 * Evaluate the model fit against other glm fits.
 
@@ -1439,7 +1509,7 @@ Likelihood Function:
 $L(\theta | y) = f(y_1 | \theta) \times f(y_2 | \theta) \times \ldots \times f(y_n | \theta)$
 
 :::{.fragment}
-
+<br>
 Log-Likelihood Function:
 
 $\ell(\theta | y) = \log(f(y_1 | \theta)) + \log(f(y_2 | \theta)) + \ldots + \log(f(y_n | \theta))$
@@ -1447,7 +1517,7 @@ $\ell(\theta | y) = \log(f(y_1 | \theta)) + \log(f(y_2 | \theta)) + \ldots + \lo
 :::
 
 :::{.fragment}
-
+<br>
 Although log-likelihood functions are mathematically easier than their multiplicative counterparts, they can be challenging to calculate by hand. They are usually calculated with software.
 
 :::
@@ -1458,7 +1528,7 @@ For a specified error family distribution and link function, the glm finds param
 
 :::{.incremental}
 
-- Which estimates have the are most probable for producing the observed data
+- Which estimates are most probable for producing the observed data
 
 - This is an iterative process, without a single defined equation
 
@@ -1471,6 +1541,11 @@ $$\ell(\theta | \mathbf{y}) = \sum_{i=1}^{n} \log(f(y_i | \theta))$$
 
 
 ## Maximum Likelihood
+
+
+::::{.columns}
+
+:::{.column}
 
 ```{r}
 #| eval: true
@@ -1514,7 +1589,19 @@ ggplot(grid, aes(x = mu, y = sigma, z = log_likelihood)) +
 log_likelihood_visual()
 ```
 
-## Exercise
+:::
+
+:::{.column}
+
+- A contour plot visualizing the log-likelihood surface for a normal distribution fitted to simulated data. 
+
+- The contour lines on the plot represent regions of equal log-likelihood values. Darker regions indicate lower log-likelihood values, while lighter regions indicate higher log-likelihood values
+
+:::
+
+::::
+
+## Exercise: log-likelihood
 
 <br><br>
 
@@ -1538,9 +1625,9 @@ countdown::countdown(
 
 ## Deviance
 
-- The deviance is a key concept in generalized linear models. 
+- The deviance is a key concept in Generalised linear models. 
 
-- It measures the deviance of the fitted generalized linear model with respect to a perfect/**saturated** model for the sample.
+- It measures the deviance of the fitted Generalised linear model with respect to a perfect/**saturated** model for the sample.
 
 ```{r}
 #| eval: true
@@ -1651,9 +1738,9 @@ r.squaredLR(janka_gamma)
 
 - It aims to find the model that best explains the data while avoiding overfitting.
 
-- AIC is calculated as follows: $\text{AIC} = 2k - 2\ln(\hat{L})$, where:
-log-likelihood is the maximized value of the likelihood function for the fitted model.
-$k$ is the number of parameters in the model.
+- AIC is calculated as follows: $\text{AIC} = 2k - 2\ln(\hat{L})$, 
+
+- where: log-likelihood is the maximized value of the likelihood function for the fitted model. $k$ is the number of parameters in the model.
 
 - In general a difference in AIC of <2 suggests equivalent goodness-of-fit
 
@@ -1685,11 +1772,13 @@ $k$ is the number of parameters in the model.
 
 ::::
 
-## Exercise
+## Exercise: Compare models
 
 * Revisit the janka models
 
 * Compare R-squared fits and AIC values
+
+* `r.squaredLR()` and `AIC()`
 
 ```{r}
 #| label: ex-fits-timer
@@ -1709,7 +1798,7 @@ countdown::countdown(
 
 
 
-## Likelihood ratio Test
+## Likelihood ratio test
 
 The likelihood ratio test (LRT) “unifies” frequentist statistical tests. Brand-name tests like t-test, F-test, chi-squared-test, are specific cases (or even approximations) of the LRT.
 
@@ -1739,17 +1828,14 @@ Where:
 
 fitted_model <- glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt"))
 null_model <- glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt"))
-
+fitted_likelihood <- logLik(glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt")))
+null_likelihood <- logLik(glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt")))
 ```
 
 ```{r}
-
 #| echo: true
 #| eval: true
 
-fitted_likelihood <- logLik(glm(hardness ~ dens, data = janka, family = Gamma(link = "sqrt")))
-
-null_likelihood <- logLik(glm(hardness ~ 1, data = janka, family = Gamma(link = "sqrt")))
 
 LR <- -2*(null_likelihood[1]-fitted_likelihood[1])
 
@@ -1761,7 +1847,7 @@ LR
 
 :::{.incremental}
 
-- The likelihood ratio test is typically calculated as twice the difference in deviance between the two models.
+- The likelihood ratio test `lrtest()` is typically calculated as twice the difference in deviance between the two models.
 
 - Scaling by -2 ensures the test statistic follows a chi-square distribution under certain conditions
 
@@ -1792,18 +1878,34 @@ summary(fitted_model)
 
 anova(null_model, fitted_model, test = "F")
 
+ drop1(fitted_model, test = "F")
+
+```
+
+## F distribution
+
+What if the variance is unknown e.g. Gaussian and Gamma distributions?
+
+
+```{r}
+#| echo: true
+#| eval: true
+
+anova(null_model, fitted_model, test = "F")
+
 # drop1(fitted_model, test = "F")
 
 ```
 
-## Challenge?
+
+## Challenge: Fruitfly
 
 
 * Using the `fruitfly.csv` dataset
 
 * Build a model to investigate the effect of sleep, mating status and body size on longevity
 
-* Check model fits and report findings
+* Check the model fits and report findings
 
 ```{r}
 #| label: ex-fly-glm-timer
@@ -1821,7 +1923,6 @@ countdown::countdown(
 )
 ```
 
-
 ## Confidence intervals
 
 ```{r}
@@ -1830,7 +1931,7 @@ countdown::countdown(
 
 fruitfly <- read_csv("../data/fruitfly.csv")
 
-fly_glm <- glm(longevity ~ type + thorax + sleep, family = gaussian(link = "sqrt"), data = fruitfly)
+fly_gamma <- glm(longevity ~ type + thorax + sleep, family = Gamma(link = "identity"), data = fruitfly)
 
 ```
 
@@ -1842,10 +1943,10 @@ fly_glm <- glm(longevity ~ type + thorax + sleep, family = gaussian(link = "sqrt
 # Assuming 'model' is your fitted GLM model
 
 # Extract coefficients and confidence intervals
-coef_ci <- confint(fly_glm)
+coef_ci <- confint(fly_gamma)
 
 # Extract estimates
-estimates <- coef(fly_glm)
+estimates <- coef(fly_gamma)
 
 # Combine estimates with confidence intervals
 estimates_df <- data.frame(
@@ -1869,33 +1970,39 @@ estimates_df
 # Alternatively, using package-specific functions
 # Example with 'broom' package
 library(broom)
-tidy(fly_glm, conf.int = T)
+tidy(fly_gamma, conf.int = T)
 
 ```
 
-## Exponentiate terms
+## Extracting main effects
 
-Terms are currently not on the same scale as the response variable:
+- Estimates and confidence intervals are set agains the intercept
 
-- Exponentiated coefficients allow for direct comparison of the effects of predictors on the response variable.
-
-- Be clear and careful about which you are using
+- Hypothesis testing of factors with more than one level requires lrt:
 
 ```{r}
 #| echo: true
 #| eval: true
 #| message: false
 
-# Extract coefficients and confidence intervals on response scale
-coef_ci <- exp(confint(fly_glm))
+drop1(fly_gamma, test = "F")
 
-# Extract estimates
-estimates <- exp(coef(fly_glm))
+```
 
-# Alternatively, using package-specific functions
-# Example with 'broom' package
-library(broom)
-tidy(fly_glm, conf.int = T, exponentiate = T)
+## Estimates and post-hoc
+
+The `emmeans` package in R computes estimated marginal means (EMMs) it can also provides post-hoc comparisons and contrasts for fitted models.
+
+By default the package computes marginal means with 95% confidence intervals for the average of each variable
+
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+emmeans::emmeans(fly_gamma, 
+                 specs = pairwise ~ type + thorax + sleep,
+                 type = "response")
 
 ```
 
@@ -1910,25 +2017,63 @@ tidy(fly_glm, conf.int = T, exponentiate = T)
 
 library(gtsummary)
 
-tbl_summary(fly_glm)
+tbl_regression(fly_gamma)
 
 library(sjPlot)
 
-tab_model(fly_glm)
+tab_model(fly_gamma)
 
 ```
 
-##
+## Summary table
 
 ```{r}
 #| echo: false
 #| eval: true
 #| message: false
 
-library(sjPlot)
+library(gtsummary)
 
-tab_model(fly_glm)
+tbl_regression(fly_gamma)
 
+```
+
+
+## Figures
+
+```{r}
+# Co-erce emmeans to a tibble  - provide range of required predictions for thorax 
+means <- emmeans::emmeans(fly_gamma, 
+                 specs = ~ type + thorax,
+                 at = list(thorax=c(0.64,0.94)),
+                 type = "response") |> 
+  as_tibble()
+
+# set figure colours
+colours <- c("cyan", "darkorange", "purple")
+
+# Overly model predictions with observed values
+fruitfly |> 
+  ggplot(aes(x=thorax, y = longevity, colour = type, fill = type))+
+  geom_ribbon(data = means,
+              aes(x = thorax, 
+                  y = emmean,
+                  ymin=lower.CL, 
+                  ymax=upper.CL), alpha = 0.2)+
+  geom_line(data = means,
+            aes(linetype = "dashed",
+                x = thorax,
+                y = emmean),
+                show.legend = FALSE)+
+  geom_point(data = fruitfly, aes(x = thorax, y = longevity),
+             show.legend = FALSE)+
+  scale_colour_manual(values = colours)+
+  scale_fill_manual(values = colours)+
+  labs(y = "Lifespan in days",
+       x = "Thorax length (mm)",
+       fill = "Type of female exposure")+
+  guides(colour = "none")+
+  theme_classic()
 ```
 
 # GLMs for binary data {background-color="#D9DBDB"}
@@ -2382,6 +2527,8 @@ plot(mayfly_glm, which = 1)
 - [DHARMa](https://theoreticalecology.wordpress.com/2016/08/28/dharma-an-r-package-for-residual-diagnostics-of-glmms/) works by **simulating residuals** from the fitted model, comparing them with observed residuals, and providing diagnostic plots to assess model adequacy and identify potential issues like heteroscedasticity or influential data points.
 
 ```{r}
+#| echo: true
+#| eval: true
 library(DHARMa)
 plot(simulateResiduals(mayfly_glm))
 
@@ -2478,8 +2625,8 @@ ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
 
 
 ```{r}
-#| eval: true
-#| echo: false
+#| eval: false
+#| echo: true
 #| fig-height: 7
 #| message: false
 means <- emmeans::emmeans(mayfly_glm, 

@@ -4,10 +4,10 @@
 # providing insight into the likelihood of observing the generated data under different parameter settings.
 
 
-
-
 # Simulated data
 set.seed(42)
+
+## Run the function below to set up
 
 log_likelihood_visual <- function(mean = 6, sd = 2){
   
@@ -37,3 +37,8 @@ log_likelihood_visual <- function(mean = 6, sd = 2){
          fill = "Log-Likelihood") +
     theme_minimal()
 }
+
+
+## Run the function - if parentheses are left blank it will run with a preset mean = 6 and sd = 2
+
+log_likelihood_visual(mean = , sd = )
