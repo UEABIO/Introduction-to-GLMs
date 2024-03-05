@@ -1958,6 +1958,8 @@ estimates_df
 
 ## Confidence intervals
 
+[`Broom`](https://broom.tidymodels.org/) is a tidyverse package for with helpers to extract and convert models into tibbles:
+
 ```{r}
 #| echo: true
 #| eval: true
@@ -2556,15 +2558,20 @@ plot(mayfly_glm, which = 4)
 
 ## Model fit
 
-Residuals in binary glms will never be normally distributed - so a "residuals vs fitted plot" provides little insight.
+Residuals in binary glms will never be normally distributed - so a "residuals vs fitted plot" provides little insight. We can try "binned residuals": 
 
 ```{r}
 #| eval: true
 #| echo: false
 #| fig-height: 6
 #| message: false
+#| layout-ncol: 2
 
 plot(mayfly_glm, which = 1)
+
+pred <- predict(mayfly_glm)
+
+arm::binnedplot(pred, dresid)
 
 ```
 
@@ -2710,7 +2717,84 @@ ggplot(Mayflies, aes(x=CCU, y=Occupancy)) + geom_point()+
 
 
 
+## Practice - Bacteria
 
+```{r}
+#| label: ex-bact-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+<br><br>
+
+Using the 'bacteria' dataset, model the presence of *H. influenzae* as a function of `treatment` and `week` of test.
+
+Start with a full model between these two variables (include an interaction term) and use the likelihood ratio test to see if this should be retained
+
+```{r}
+
+#| eval: true
+#| echo: false
+#| message: false
+
+library(MASS)
+data(bacteria)
+glimpse(bacteria)
+
+```
+
+## Solution - Bacteria
+
+- Fit the model and check whether residuals are ok?
+
+- Full model:
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+
+model.bact1 <- glm(y ~ trt * week, data = bacteria, family = binomial)
+
+drop1(model.bact1, test = "Chi")
+
+
+```
+
+
+## Solution - Bacteria
+
+
+We found no significant difference in deviance when the interaction term was dropped from the full model $\chi^2_1$ = 0.68, p = 0.7098. So this was removed from the model and estimates were calculated from an additive model containing treatment and week
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| message: false
+#| layout-ncol: 2
+
+model.bact2 <- glm(y ~ trt + week, data = bacteria, family = binomial)
+
+drop1(model.bact2, test = "Chi")
+
+summary(model.bact2)
+
+
+```
 
 ## Challenge
 
@@ -2863,8 +2947,8 @@ beetles
 As well as the numbers killed, we need the numbers that remain alive
 
 ```{r}
-#|echo: true
-#|message: false
+#| echo: true
+#| eval: true
 
 beetles <- beetles |> 
   rename("dead" = Number_killed,
@@ -2893,8 +2977,8 @@ whereas the Binomial is used when the outcome of an event is required multiple t
 The GLM of the binomial counts will analyse the number of *each* batch of beetles killed, while taking into account the size of each group
 
 ```{r}
-#|echo: true
-#|message: false
+#| echo: true
+#| eval: true
 
 #cbind() creates a matrix of successes and failures for each batch
 
@@ -2909,8 +2993,8 @@ summary(beetle_glm)
 An alternative method is to analyse the proportion of beetles killed and including the number of trials with the `weight` argument
 
 ```{r}
-#|echo: true
-#|message: false
+#| echo: true
+#| eval: true
 
 
 beetle_glm_weights <- glm(Mortality_rate ~ Dose, weights = trials, family = binomial(link = "logit"), data = beetles)
@@ -2959,7 +3043,7 @@ plot(beetle_glm_weights, which = 2)
 
 ```{r}
 #| echo: true
-#| eval: true
+#| eval: false
 
 # Calculate and plot "deviance" residuals
 
@@ -3036,20 +3120,28 @@ plot(simulateResiduals(beetle_glm_weights))
 
 :::
 
-## Confidence intervals
+## Estimates of significance
+
+Confidence intervals
 
 ```{r}
 #| echo: true
 #| eval: true
 #| message: false
 
-# Alternatively, using package-specific functions
-# Example with 'broom' package
 library(broom)
 tidy(beetle_glm, conf.int = T)
 
 ```
 
+```{r}
+#| echo: true
+#| eval: true
+#| message: false
+
+drop1(beetle_glm, test = "Chi")
+
+```
 
 ## Table
 
@@ -3176,9 +3268,14 @@ summary(beetle_quasiglm)
 
 ## Fitting the quasibinomial model
 
+::::{.columns}
+
+:::{.column}
+
 Standard Error, Confidence intervals and p-values WILL change.
 
 Estimates remain the same
+
 
 ```{r}
 #| eval: true
@@ -3208,6 +3305,26 @@ ggplot(beetles, aes(x=Dose, y=Mortality_rate)) + geom_point()+
 
 ```
 
+:::
+
+:::{.column}
+
+Likelihood ratio tests should now be applied with an F-statistics
+
+
+```{r}
+#| eval: true
+#| echo: true
+#| message: false
+
+drop1(beetle_quasiglm, test = "F")
+
+```
+
+:::
+
+::::
+
 ## Challenge
 
 
@@ -3220,9 +3337,7 @@ On the afternoon of January 28th, 1986 the space shuttle Challenger experienced 
 
 An investigation discovered critical failures in all six of the O-rings in the solid rocket booster.
 
-The question of interest is:
-
-> How does temperature affect the probability of o-ring failure?
+> How did temperature affect the probability of o-ring failure?
 
 > What was the probability of all o-rings failing when the temperature was 36 degrees F
 

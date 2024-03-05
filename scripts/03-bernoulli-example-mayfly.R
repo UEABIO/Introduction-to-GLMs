@@ -11,7 +11,9 @@
 ## Load necessary libraries====
 
 library(tidyverse)
+library(broom) # installed with tidyverse but needs separate loading
 library(MuMIn)
+library(arm)
 library(DHARMa)
 library(emmeans)
 
@@ -38,6 +40,18 @@ plot(mayfly_glm, which = 5)
 plot(mayfly_glm, which = 4)
 
 
+## Binned residuals plot
+
+pred <- predict(mayfly_glm)
+
+arm::binnedplot(pred,dresid)
+
+
+## Performance package model checks====
+# Same as above but will auto-select the appropriate residual plots
+# performance::check_model(mayfly_glm)
+
+
 ## Simulated residuals check====
 
 plot(DHARMa::simulateResiduals(mayfly_glm))
@@ -49,6 +63,17 @@ summary(mayfly_glm)
 # Pseudo r-squared
 MuMIn::r.squaredLR(mayfly_glm)
 
+
+## Likelihood ratio tests - useful when determining whether to keep or retain interaction terms
+## Or for reporting main effects
+
+mayfly_null <- glm(Occupancy ~ 1, family = binomial(link = "logit"), data = Mayflies)
+
+
+# Changes in 2*deviance for a Binomial error model should follow a chi-square distribution
+anova(mayfly_glm, mayfly_null, test = "Chi")
+
+drop1(mayfly_glm, test = "Chi")
 
 # Exponentiated terms with broom helper
 
@@ -64,10 +89,17 @@ predict(mayfly_glm, type = "response")
 
 # Predictions for new data
 new_CCU<- data.frame(CCU = c(0,1,2,3,4,5))
-predict(mayfly_glm, newdata = new_CCU, type = "response")
+new_pred <- predict(mayfly_glm, newdata = new_CCU, type = "response")
 
+new_pred
+
+# Generate a new dataframe if required
+new_CCU$new_pred <- new_pred
 
 # Marginal means & "predictions" with emmeans
+
+## Generating confidence intervals for marginal means is not straightforward with standard stats functions,
+## emmeans is a very good helper for this process!
 
 emmeans::emmeans(mayfly_glm,  # model
                  specs = ~ CCU, # if a term is not included results will be the "average" response at mean of missing term
