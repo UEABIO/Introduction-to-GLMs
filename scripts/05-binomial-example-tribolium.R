@@ -16,7 +16,7 @@ library(emmeans)
 library(sjPlot)
 
 ## Read the CSV file====
-beetles <- read_csv("../data/beetles.csv")
+beetles <- read_csv("data/beetles.csv")
 
 ## Preprocess the data: rename columns and calculate 'alive' column====
 beetles <- beetles |> 
@@ -53,7 +53,7 @@ hist(dresid)
 # beetle_glm <- glm(cbind(dead, alive) ~ Dose, family = quasibinomial(link = "logit"), data = beetles)
 
 # Binned residuals
-arm::binnedplot(dresid, pred)
+arm::binnedplot(pred, dresid)
 
 # Plot leverage
 plot(beetle_glm_weights, which = 5)

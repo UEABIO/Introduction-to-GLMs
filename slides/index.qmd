@@ -3325,7 +3325,7 @@ drop1(beetle_quasiglm, test = "F")
 
 ::::
 
-## Challenge
+## Challenge: Binomial model
 
 
 :::: columns
@@ -3701,6 +3701,17 @@ countdown::countdown(
 )
 ```
 
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 5
+broom::augment(cuckoo_glm1, type.predict = "response") %>% 
+    ggplot(aes(x=Mass, y=.fitted, colour=Species)) + 
+    geom_point() +
+    geom_line()+
+    scale_colour_manual(values=c("green3","turquoise3"))+
+    theme_minimal()
+```
 
 ## Model summary
 
@@ -3710,18 +3721,6 @@ countdown::countdown(
 summary(cuckoo_glm1)
 
 ```
-
-## Residuals
-
-```{r}
-#| echo: true
-#| layout-ncol: 2
-
-plot(cuckoo_glm1, which=2)
-plot(cuckoo_glm1, which=3)
-
-```
-
 
 
 ## Poisson model check
@@ -3990,6 +3989,53 @@ drop1(cuckoo_glmq, test = "F")
 ```
 
 
+## Challenge: Monarch butterflies
+
+:::: columns
+
+
+::: {.column width="60%"}
+
+This dataset contains standardised counts of Monarch butterflies across three different gardens. 
+
+> Is there a difference in observance of the butterflies between these three sites?
+
+> Check the poisson model is a good fit for this data
+
+> Get the monarchs.csv dataset
+
+
+
+:::
+
+::: {.column width="40%"}
+
+```{r}
+#| label: ex-monarch-timer
+countdown::countdown(
+  minutes = 15,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+<br><br>
+
+![](images/monarch.jpeg){fig-align="center" fig-alt="Monarch butterfly" width=60%}
+
+:::
+
+::::
+
+
+
 # Zero-inflation  {background-color="#D9DBDB"}
 
 ## Zero-inflation
@@ -4114,6 +4160,8 @@ Model validation is not straightforward for zero-inflated models
 
 :::{.column}
 
+Neither the `performance` package or `DHARMa` will produce outputs at this time. 
+
 ```{r}
 #| echo: true
 
@@ -4142,6 +4190,29 @@ qqline(sresid, col = "red")
 :::
 
 ::::
+
+## Model comparisons
+
+```{r}
+cuckoo_glm1 <- glm(Beg ~ Mass + Species + Mass:Species, data=cuckoo, family=poisson(link="log"))
+
+cuckoo_zip <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
+                           mass.c + Species + mass.c:Species,
+                       dist = "poisson",
+                       link = "logit",
+                       data = cuckoo)
+
+cuckoo_nb <- glm.nb(Beg ~ Mass + Species + Mass:Species, data=cuckoo, link="log")
+
+```
+
+
+```{r}
+#| echo: true
+
+AIC(cuckoo_glm1, cuckoo_nb, cuckoo_zip)
+
+```
 
 # Negative Binomial {background-color="#D9DBDB"}
 
@@ -4250,6 +4321,8 @@ countdown::countdown(
 ::: {.column}
 
 ![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
+Determine whether the poisson model is suitable for this dataset?
+
 :::
 
 :::{.column}
@@ -4265,7 +4338,7 @@ The question of interest is:
 :::
 
 
-- Determine whether the poisson model is suitable for this dataset?
+
 
 ```{r}
 #| eval: true
