@@ -68,47 +68,17 @@ reveg_zip <- zeroinfl(Soleolifera ~ Treatment|
 
 
 
-sresid <- residuals(cuckoo_zip, type = "pearson")
+sresid <- residuals(reveg_zip, type = "pearson")
 
-pred <- predict(cuckoo_zip)
+pred <- predict(reveg_zip)
 
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
 
+hist(sresid)
+plot(sresid ~ pred)
+qqnorm(sresid)
+qqline(sresid, col = "red")
 
-
-summary(cuckoo_zip)
-
-
-## A comparison of models:
-
-colors <- c("Quasi" = "cyan", "NegBin" = "darkorange")
-
-means_quasi <- emmeans::emmeans(stick_quasi, 
-                                specs = ~ Treatment, 
-                                type='response') |> 
-  as_tibble()
-
-means_nb <- emmeans::emmeans(stick_nb, 
-                             specs = ~ Treatment, 
-                             type='response') |> 
-  as_tibble()
+summary(rveg_zip)
 
 
-
-ggplot(parasite, aes(x=Treatment, y=Diplo_intensity)) + 
-  geom_jitter(width = .2,
-              alpha = .4)+
-  geom_pointrange(data = means_quasi,
-                  aes(x = Treatment,
-                      y = rate,
-                      ymin = asymp.LCL, ymax = asymp.UCL,
-                      colour = "Quasi"),
-                  position = position_nudge(x= -.2))+
-  geom_pointrange(data = means_nb,
-                  aes(x = Treatment,
-                      y = response,
-                      ymin = asymp.LCL, ymax = asymp.UCL,
-                      color = "NegBin"),
-                  position = position_nudge(x= .2))+
- 
-  theme_classic(base_size = 14)+
-  scale_color_manual(values = colors)
