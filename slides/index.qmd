@@ -7,6 +7,8 @@ format:
     self-contained: true
     auto-stretch: false
     footer: "{{< fa envelope >}} [p.leftwich@uea.ac.uk](mailto: p.leftwich@uea.ac.uk) {{< fa globe >}} [philip.leftwich.github.io](https://philip.leftwich.github.io/) {{< fa brands linkedin >}} [philip-leftwich](https://www.linkedin.com/in/philip-leftwich-117052155/)"
+    
+    always_allow_html: yes
 ---
 
 # Welcome! {background-color="#D9DBDB"}
@@ -3042,8 +3044,8 @@ plot(beetle_glm_weights, which = 2)
 :::{.column}
 
 ```{r}
-#| echo: true
-#| eval: false
+#| echo: false
+#| eval: true
 
 # Calculate and plot "deviance" residuals
 
@@ -3701,6 +3703,46 @@ countdown::countdown(
 )
 ```
 
+
+:::{.fragment}
+
+
+```{r}
+#| echo: false
+#| fig-height: 6
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+plot(cuckoo_lm, which=2)
+
+plot(cuckoo_lm, which=3)
+
+plot(cuckoo_glm1, which=2)
+
+plot(cuckoo_glm1, which=3)
+```
+
+:::
+
+
+
+## Model summary
+
+::::{.columns}
+
+:::{.column}
+
+```{r}
+#| echo: true
+
+summary(cuckoo_glm1)
+
+```
+
+:::
+
+:::{.column}
+
 ```{r}
 #| eval: true
 #| echo: false
@@ -3713,14 +3755,9 @@ broom::augment(cuckoo_glm1, type.predict = "response") %>%
     theme_minimal()
 ```
 
-## Model summary
+:::
 
-```{r}
-#| echo: true
-
-summary(cuckoo_glm1)
-
-```
+::::
 
 
 ## Poisson model check
@@ -3801,13 +3838,13 @@ summary(cuckoo_glm2)
 
 * `cuckoo$mass.c <- cuckoo$Mass - mean(cuckoo$Mass, na.rm =T)`
 
-* Mean center the mass variable and recheck VIF.
+* Mean center the mass variable and recheck VIF. `car::vif()`
 
 
 ```{r}
 #| label: ex-vif-timer
 countdown::countdown(
-  minutes = 15,
+  minutes = 10,
   color_border = "#00AEEF",
   color_text = "#00AEEF",
   color_running_text = "white",
@@ -4034,6 +4071,314 @@ countdown::countdown(
 
 ::::
 
+# Negative Binomial {background-color="#D9DBDB"}
+
+## Negative Binomial
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| fig-width: 10
+#| message: false
+
+##Negative Binomial Distribution (Varying Shape Parameter r)
+#In the negative binomial distribution:
+  
+#  Shape Parameter (r): Represents the number of successes required before the experiment is stopped.
+#Probability of Success (p): Represents the probability of success in each Bernoulli trial.
+#As r increases:
+  
+#  The distribution becomes more skewed to the right.
+#The average number of failures before success increases.
+#The variance of the distribution also increases, indicating greater variability.
+
+# Function to generate negative binomial distribution data
+generate_nbinom_data <- function(r, p) {
+  tibble(failures = 0:(10*r), 
+         probability = dnbinom(0:(10*r), size = r, prob = p))
+}
+
+# Define range of shape parameter values (r)
+r_values <- rep(c(2, 5, 10), times = 3)  # Number of successes
+
+# Fixed probability of success
+p_fixed <- rep(c(0.2, 0.4, 0.6), each = 3)  
+
+# Generate negative binomial distribution data for different r values
+nbinom_data <- map2_df(r_values, p_fixed, ~generate_nbinom_data(r = .x, p = .y) 
+                      %>% mutate(r = as.factor(.x)) %>% mutate(p = as.factor(.y))) 
+
+# Plot for negative binomial distribution
+ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = interaction(r,p))) +
+  geom_line() +
+  scale_color_brewer(palette = "Dark2")+
+  labs(title = "Negative Binomial Distribution with Varying Shape Parameter (r)",
+       x = "Number of Failures",
+       y = "Probability",
+       color = "Number of Successes (r)") +
+  theme_minimal(base_size = 14)+
+  facet_wrap(~p)+
+  gghighlight::gghighlight()
+
+```
+
+## Negative Binomial
+
+Negative binomial GLMs are favored when overdispersion is high.
+
+It has two parameters, $μ$ and $\theta$. $\theta$ controls for the dispersion parameter (smaller $\theta$ indicates higher dispersion). It corresponds to a combination of two distributions (Poisson and gamma).
+
+It assumes that the $Y_i$ are Poisson distributed with the mean $μ_i$ assumed to follow a gamma distribution:
+
+$$
+E(Y_i) = μ_i \\
+\text{Var}(Y_i) = μ_i + μ_i^2/k
+$$
+
+
+## Fitting a negative binomial in R
+
+Negative binomial is not in the `glm()` function. We need the `MASS` package:
+
+Suitable for strongly over-dispersed zero-bounded integer data.
+
+```{r}
+#| eval: false
+#| echo: true
+#| message: false
+
+library(MASS)
+
+model <- glm.nb(y ~ x1 + x2, link = "log", data = dataframe)
+
+```
+
+
+## Negbin: Example
+
+:::: columns
+
+```{r}
+#| label: ex-stickpois-timer
+countdown::countdown(
+  minutes = 10,
+  color_border = "#00AEEF",
+  color_text = "#00AEEF",
+  color_running_text = "white",
+  color_running_background = "#00AEEF",
+  color_finished_text = "#00AEEF",
+  color_finished_background = "white",
+  top = 0,
+  margin = "1.2em",
+  font_size = "2em"
+)
+```
+
+::: {.column}
+
+![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
+
+<br>
+
+Open the parasite dataset and script
+
+Determine whether the poisson model is suitable for this dataset?
+
+:::
+
+:::{.column}
+
+<br><br>
+
+The example is an experiment measuring the effect of the parasitic tapeworm *Schistocephalus solidus* infection on the susceptibility of infection from a second parasite, the trematode *Diplostomum pseudospathaceum*
+
+The question of interest is:
+
+> How does Treatment/Infection status affect trematode counts?
+
+:::
+
+
+
+
+```{r}
+#| eval: true
+#| echo: false
+#| fig-height: 8
+#| fig-width: 10
+#| message: false
+
+parasite <- read_csv("../data/parasite_exp.csv")
+
+stick_poisson <- glm(Diplo_intensity ~ Treatment, family = "poisson", data = parasite)
+
+```
+
+
+::::
+
+
+
+## Univariate distribution
+
+```{r}
+#| echo: true
+#| fig-height: 6
+#| warning: false
+
+par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
+fp <- fitdist(parasite$Diplo_intensity, "pois")
+fn <- fitdist(parasite$Diplo_intensity, "norm")
+fnb<- fitdist(parasite$Diplo_intensity, "nbinom")
+plot.legend <- c("normal", "poisson", "negative binomial")
+denscomp(list(fn, fp, fnb), legendtext = plot.legend)
+qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
+```
+
+## Check Poisson model
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+summary(stick_poisson)
+
+```
+
+
+## Check zero-inflation
+
+The model is underfitting zeros (but not by much). 
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+check_zeroinflation(stick_poisson)
+
+100*sum(parasite$Diplo_intensity == 0)/nrow(parasite)
+# Only 2% of our data has zeros
+
+```
+
+## Compare models
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Quasilikelihood
+stick_quasi <- glm(Diplo_intensity ~ Treatment, family = quasipoisson, data = parasite)
+
+```
+
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Neg bin
+stick_nb <- glm.nb(Diplo_intensity ~ Treatment, link = "log", data = parasite)
+
+```
+
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+# Zero-inflated model
+stick_zip <- zeroinfl(Diplo_intensity ~ Treatment| 
+                   Treatment,
+                dist = "poisson",
+                link = "logit",
+                data = parasite)
+
+
+```
+
+## Compare models
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| warning: false
+
+
+AIC(stick_poisson)
+AIC(stick_quasi)
+AIC(stick_nb)
+AIC(stick_zip)
+
+```
+
+## Validating Negative Binomial models
+
+```{r}
+#| echo: true
+#| fig-height: 7
+#| layout-ncol: 2
+#| warning: false
+
+library(DHARMa)
+plot(simulateResiduals(stick_nb))
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+plot(stick_nb)
+
+```
+
+
+## Comparison of model predictions
+
+- Luckily in this instance we can be assured that each of these models makes very similar predictions:
+
+```{r}
+
+colors <- c("Quasi" = "cyan", "NegBin" = "darkorange", "ZeroInfl" = "purple")
+
+means_quasi <- emmeans::emmeans(stick_quasi, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_nb <- emmeans::emmeans(stick_nb, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+means_zip <- emmeans::emmeans(stick_zip, 
+                 specs = ~ Treatment, 
+                 type='response') |> 
+  as_tibble()
+
+ggplot(parasite, aes(x=Treatment, y=Diplo_intensity)) + 
+  geom_jitter(width = .2,
+              alpha = .4)+
+ geom_pointrange(data = means_quasi,
+                 aes(x = Treatment,
+                     y = rate,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     colour = "Quasi"))+
+geom_pointrange(data = means_nb,
+                 aes(x = Treatment,
+                     y = response,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "NegBin"),
+                position = position_nudge(x= .2))+
+geom_pointrange(data = means_zip,
+                 aes(x = Treatment,
+                     y = emmean,
+                     ymin = asymp.LCL, ymax = asymp.UCL,
+                     color = "ZeroInfl"),
+                position = position_nudge(x= -.2))+  
+  theme_classic(base_size = 14)+
+  scale_color_manual(values = colors)
+
+```
 
 
 # Zero-inflation  {background-color="#D9DBDB"}
@@ -4115,6 +4460,9 @@ y ~ x1 + x2 | z1 +z2
 
 ## Checking for zero-inflation
 
+::::{.columns}
+
+:::{.column}
 
 ```{r}
 #| eval: true
@@ -4122,16 +4470,26 @@ y ~ x1 + x2 | z1 +z2
 
 hist(cuckoo$Beg)
 
+100*sum(cuckoo$Beg== 0)/nrow(cuckoo)
+# 25% of data is zeros
 ```
 
+:::
+
+:::{.column}
 
 ```{r}
 #| eval: true
 #| echo: true
 
-check_zeroinflation(cuckoo_glm2)
+performance::check_zeroinflation(cuckoo_glm2)
 
 ```
+
+:::
+
+::::
+
 
 ## Fit the model
 
@@ -4151,16 +4509,29 @@ summary(cuckoo_zip)
 ```
 
 
+## Check for zero-inflated negbin
+
+```{r}
+#| echo: true
+
+cuckoo_zinb <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
+                   mass.c + Species + mass.c:Species,
+                dist = "negbin",
+                link = "logit",
+                data = cuckoo)
+
+summary(cuckoo_zinb)
+
+```
+
 ## Model validation
 
 Model validation is not straightforward for zero-inflated models
 
 
-::::{.columns}
-
-:::{.column}
-
 Neither the `performance` package or `DHARMa` will produce outputs at this time. 
+
+We have to create manual checks of the residuals:
 
 ```{r}
 #| echo: true
@@ -4169,12 +4540,20 @@ sresid <- residuals(cuckoo_zip, type = "pearson")
 
 pred <- predict(cuckoo_zip)
 
+sresidnb <- residuals(cuckoo_zinb, type = "pearson")
+
+prednb <- predict(cuckoo_zinb)
+
 
 ```
 
-:::
+##
+
+::::{.columns}
 
 :::{.column}
+
+Zero-inflated poisson
 
 ```{r}
 #| echo: true
@@ -4189,11 +4568,38 @@ qqline(sresid, col = "red")
 ```
 :::
 
+:::{.column}
+
+Zero-inflated negative binomial
+
+```{r}
+#| echo: true
+
+par(mfrow = c(2, 2), mar = c(4, 4, 2, 1))
+
+hist(sresidnb)
+plot(sresidnb ~ prednb)
+qqnorm(sresidnb)
+qqline(sresidnb, col = "red")
+
+```
+
+
+:::
+
 ::::
 
 ## Model comparisons
 
+How do we know which of is the best model of our data?
+
+Do I really NEED zero-inflation? Check against negative binomial
+
+Here I am comparing 
+
 ```{r}
+#| echo: false
+
 cuckoo_glm1 <- glm(Beg ~ Mass + Species + Mass:Species, data=cuckoo, family=poisson(link="log"))
 
 cuckoo_zip <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
@@ -4204,108 +4610,45 @@ cuckoo_zip <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species|
 
 cuckoo_nb <- glm.nb(Beg ~ Mass + Species + Mass:Species, data=cuckoo, link="log")
 
+cuckoo_zinb <- zeroinfl(Beg ~ mass.c + Species + mass.c:Species| 
+                           mass.c + Species + mass.c:Species,
+                       dist = "negbin",
+                       link = "logit",
+                       data = cuckoo)
+
 ```
 
 
 ```{r}
 #| echo: true
 
-AIC(cuckoo_glm1, cuckoo_nb, cuckoo_zip)
-
-```
-
-# Negative Binomial {background-color="#D9DBDB"}
-
-## Negative Binomial
-
-```{r}
-#| eval: true
-#| echo: false
-#| fig-height: 8
-#| fig-width: 10
-#| message: false
-
-##Negative Binomial Distribution (Varying Shape Parameter r)
-#In the negative binomial distribution:
-  
-#  Shape Parameter (r): Represents the number of successes required before the experiment is stopped.
-#Probability of Success (p): Represents the probability of success in each Bernoulli trial.
-#As r increases:
-  
-#  The distribution becomes more skewed to the right.
-#The average number of failures before success increases.
-#The variance of the distribution also increases, indicating greater variability.
-
-# Function to generate negative binomial distribution data
-generate_nbinom_data <- function(r, p) {
-  tibble(failures = 0:(10*r), 
-         probability = dnbinom(0:(10*r), size = r, prob = p))
-}
-
-# Define range of shape parameter values (r)
-r_values <- rep(c(2, 5, 10), times = 3)  # Number of successes
-
-# Fixed probability of success
-p_fixed <- rep(c(0.2, 0.4, 0.6), each = 3)  
-
-# Generate negative binomial distribution data for different r values
-nbinom_data <- map2_df(r_values, p_fixed, ~generate_nbinom_data(r = .x, p = .y) 
-                      %>% mutate(r = as.factor(.x)) %>% mutate(p = as.factor(.y))) 
-
-# Plot for negative binomial distribution
-ggplot(nbinom_data, aes(x = failures, y = probability, color = r, group = interaction(r,p))) +
-  geom_line() +
-  scale_color_brewer(palette = "Dark2")+
-  labs(title = "Negative Binomial Distribution with Varying Shape Parameter (r)",
-       x = "Number of Failures",
-       y = "Probability",
-       color = "Number of Successes (r)") +
-  theme_minimal(base_size = 14)+
-  facet_wrap(~p)+
-  gghighlight::gghighlight()
-
-```
-
-## Negative Binomial
-
-Negative binomial GLMs are favored when overdispersion is high.
-
-It has two parameters, $μ$ and $\theta$. $\theta$ controls for the dispersion parameter (smaller $\theta$ indicates higher dispersion). It corresponds to a combination of two distributions (Poisson and gamma).
-
-It assumes that the $Y_i$ are Poisson distributed with the mean $μ_i$ assumed to follow a gamma distribution:
-
-$$
-E(Y_i) = μ_i \\
-\text{Var}(Y_i) = μ_i + μ_i^2/k
-$$
-
-
-## Fitting a negative binomial in R
-
-Negative binomial is not in the `glm()` function. We need the `MASS` package:
-
-Suitable for strongly over-dispersed zero-bounded integer data.
-
-```{r}
-#| eval: false
-#| echo: false
-#| message: false
-
-library(MASS)
-
-model <- glm.nb(y ~ x1 + x2, link = "log", data = dataframe)
+AIC(cuckoo_glm1, 
+    cuckoo_nb, 
+    cuckoo_zip, 
+    cuckoo_zinb)
 
 ```
 
 
-## Negbin: Example
+## Choosing Zero-inflation models
 
-:::: columns
+- Check for overdispersion
+
+- Is your model underfitting zeros?
+
+- AND do zeros make up a substantial part of your data?
+
+- Do you think there might be a different process controlling 0/1 from count?
+
+- You probably want to compare zip and zinb for best fit.
+
+
+## Challenge - Zeroinflation
 
 ```{r}
-#| label: ex-stickpois-timer
+#| label: ex-zinf-timer
 countdown::countdown(
-  minutes = 10,
+  minutes = 20,
   color_border = "#00AEEF",
   color_text = "#00AEEF",
   color_running_text = "white",
@@ -4318,185 +4661,63 @@ countdown::countdown(
 )
 ```
 
+:::: columns
+
 ::: {.column}
 
-![](images/3 Spined Stickleback.jpg){fig-align="center" fig-alt="Stickleback" width=50%}
-Determine whether the poisson model is suitable for this dataset?
-
+![](images/Slugs.png){fig-align="center" fig-alt="Slugs" width=60%}
 :::
 
 :::{.column}
 
 <br><br>
 
-The example is an experiment measuring the effect of the parasitic tapeworm *Schistocephalus solidus* infection on the susceptibility of infection from a second parasite, the trematode *Diplostomum pseudospathaceum*
+* Using the revegetation dataset
 
-The question of interest is:
+* Check the model fit
 
-> How does Treatment/Infection status affect trematode counts?
+* Determine if zero-inflation is required
+
+* Validate the model
 
 :::
-
-
-
-
-```{r}
-#| eval: true
-#| echo: false
-#| fig-height: 8
-#| fig-width: 10
-#| message: false
-
-parasite <- read_csv("../data/parasite_exp.csv")
-
-stick_poisson <- glm(Diplo_intensity ~ Treatment, family = "poisson", data = parasite)
-
-```
-
 
 ::::
 
 
 
-## Univariate distribution
+## Decision making helper
 
-```{r}
-#| echo: true
-#| fig-height: 6
-#| warning: false
+::::{.columns}
 
-par(mfrow = c(1, 2), mar = c(4, 4, 2, 1))
-fp <- fitdist(parasite$Diplo_intensity, "pois")
-fn <- fitdist(parasite$Diplo_intensity, "norm")
-fnb<- fitdist(parasite$Diplo_intensity, "nbinom")
-plot.legend <- c("normal", "poisson", "negative binomial")
-denscomp(list(fn, fp, fnb), legendtext = plot.legend)
-qqcomp(list(fn, fp, fnb), legendtext = plot.legend)
-```
+:::{.column width="40%"}
 
-## Check Poisson model
+- What type of variable is the outcome?
 
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
+- Fit models: check residuals and AICs
 
-summary(stick_poisson)
+:::
 
-```
+:::{.column width="60%"}
 
+![](images/flow.png){fig-align="center" fig-alt="physalia logo" width=150%}
 
-## Check zero-inflation
+:::
 
-The model is underfitting zeros (but not by much). 
-
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
-check_zeroinflation(stick_poisson)
-
-```
-
-## Compare models
-
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
-# Quasilikelihood
-stick_quasi <- glm(Diplo_intensity ~ Treatment, family = quasipoisson, data = parasite)
-
-```
-
-
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
-# Neg bin
-stick_nb <- glm.nb(Diplo_intensity ~ Treatment, link = "log", data = parasite)
-
-```
-
-
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
-# Zero-inflated model
-stick_zip <- zeroinfl(Diplo_intensity ~ Treatment| 
-                   Treatment,
-                dist = "poisson",
-                link = "logit",
-                data = parasite)
-
-
-```
-
-## Compare models
-
-```{r}
-#| echo: true
-#| fig-height: 7
-#| warning: false
-
-
-AIC(stick_poisson)
-AIC(stick_quasi)
-AIC(stick_nb)
-AIC(stick_zip)
-
-```
-
-## Comparison of model predictions
-
-```{r}
-
-colors <- c("Quasi" = "cyan", "NegBin" = "darkorange", "ZeroInfl" = "purple")
-
-means_quasi <- emmeans::emmeans(stick_quasi, 
-                 specs = ~ Treatment, 
-                 type='response') |> 
-  as_tibble()
-
-means_nb <- emmeans::emmeans(stick_nb, 
-                 specs = ~ Treatment, 
-                 type='response') |> 
-  as_tibble()
-
-means_zip <- emmeans::emmeans(stick_zip, 
-                 specs = ~ Treatment, 
-                 type='response') |> 
-  as_tibble()
-
-ggplot(parasite, aes(x=Treatment, y=Diplo_intensity)) + 
-  geom_jitter(width = .2,
-              alpha = .4)+
- geom_pointrange(data = means_quasi,
-                 aes(x = Treatment,
-                     y = rate,
-                     ymin = asymp.LCL, ymax = asymp.UCL,
-                     colour = "Quasi"))+
-geom_pointrange(data = means_nb,
-                 aes(x = Treatment,
-                     y = response,
-                     ymin = asymp.LCL, ymax = asymp.UCL,
-                     color = "NegBin"),
-                position = position_nudge(x= .2))+
-geom_pointrange(data = means_zip,
-                 aes(x = Treatment,
-                     y = emmean,
-                     ymin = asymp.LCL, ymax = asymp.UCL,
-                     color = "ZeroInfl"),
-                position = position_nudge(x= -.2))+  
-  theme_classic(base_size = 14)+
-  scale_color_manual(values = colors)
-
-```
+::::
 
 # Simulate {background-color="#D9DBDB"}
 
+
+I think simulating data is a fantastic idea
+
+1) You will get better insights into your models and various error distributions
+
+2) You can check the stability of your models
+
+3) You can run proper power analyses before you start your data collection
+
+This is [Part One](https://aosmith.rbind.io/2018/08/29/getting-started-simulating-data/) of an excellent series of blog posts on simulating data
 
 # Wrap-up {background-color="#D9DBDB"}
 
@@ -4533,6 +4754,7 @@ geom_pointrange(data = means_zip,
 
 * Ecological Statistics with contemporary theory and application
 
+* The Big Book of R (https://www.bigbookofr.com/)
 
 ## 
 

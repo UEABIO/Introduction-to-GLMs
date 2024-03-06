@@ -101,7 +101,7 @@ summary(fly_gamma)
 tbl_regression(fly_gamma)
 
 # Hypothesis testing of main effects
-drop1(fyl_gamma, test = "F")
+drop1(fly_gamma, test = "F")
 
 # Mean estimates and posthoc comparisons
 
