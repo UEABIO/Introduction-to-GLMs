@@ -80,9 +80,9 @@ drop1(monarchs_glm1, test = "Chisq")
 # Figures
 
 means <- emmeans(monarchs_glm1, 
-                 specs = ~ garden,
-                 type='response')  |> 
-  as_tibble()
+                 specs =pairwise ~ garden,
+                 type='response') 
+means
 
 ggplot(means, aes(x=garden, y=rate))+
   geom_pointrange(aes(ymin = asymp.LCL, ymax = asymp.UCL))+

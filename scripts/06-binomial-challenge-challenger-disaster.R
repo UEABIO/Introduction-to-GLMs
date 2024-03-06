@@ -84,6 +84,14 @@ broom::tidy(challenger_glm, conf.int = T)
 sjPlot::tab_model(challenger_glm)
 
 
+emmeans::emmeans(challenger_glm, 
+                 specs = ~ temp, 
+                 type='response') 
+
+
+# temp   prob     SE  df asymp.LCL asymp.UCL
+# 69.6 0.0249 0.0151 Inf   0.00745    0.0797
+
 ## Predictions ===
 
 new_temp<- data.frame(temp = 36)

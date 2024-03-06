@@ -129,6 +129,16 @@ performance::check_zeroinflation(reveg_glm)
 # We are "underpredicting zeros" on a dataset with 36% zeros
 
 
+# Fit a Negbin regression model
+reveg_glm.nb<- glm.nb(Soleolifera ~ Treatment, data=reveg,link ="log")
+
+
+plot(DHARMa::simulateResiduals(reveg_glm))
+
+performance::check_zeroinflation(reveg_glm.nb)
+
+
+### Zero-inflation probably not required!
 
 reveg_zip <- zeroinfl(Soleolifera ~ Treatment| 
                          Treatment,
@@ -149,7 +159,17 @@ plot(sresid ~ pred)
 qqnorm(sresid)
 qqline(sresid, col = "red")
 
-summary(rveg_zip)
+summary(reveg_zip)
+
+
+reveg_zinb <- zeroinfl(Soleolifera ~ Treatment| 
+                        Treatment,
+                      dist = "negbin",
+                      link = "logit",
+                      data = reveg)
 
 
 ## Check AICs
+# Negative Binomial is best! 
+
+AIC(reveg_glm,reveg_glm.nb,reveg_zip, reveg_zinb)
